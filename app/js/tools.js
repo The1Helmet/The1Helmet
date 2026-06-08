@@ -29,6 +29,9 @@ export class Tools {
     this._cancelPlacing();
     this.tool = tool;
     this.placeType = placeType;
+    this.ghost = null;
+    this.app.overlay.ghost = null;
+    this.app.overlay.mateTarget = null;
     this.app.overlay.cursor = tool === 'place' ? 'crosshair' : 'default';
     this.app.render();
   }
@@ -154,6 +157,9 @@ export class Tools {
 
     if (this.placing) { this._placeHover(snap.point); this.app.render(); return; }
 
+    // Ghost preview of the prefab about to be placed (with live link-snapping).
+    if (this.tool === 'place' && !this.drag) { this._updateGhost(snap.point); this.app.render(); return; }
+
     if (!this.drag) { this.app.render(); return; }
 
     if (this.drag.type === 'pan') {
@@ -202,6 +208,7 @@ export class Tools {
   _placeClick(world) {
     const snap = this.snap(world, this.placing ? new Set([this.placing.entity.id]) : new Set());
     const w = snap.point;
+    this.ghost = null; this.app.overlay.ghost = null; this.app.overlay.mateTarget = null;
     if (!this.placing) {
       const e = createEntity(this.placeType, w);
       this.app.store.add(e, { select: true, commit: false });
@@ -226,25 +233,38 @@ export class Tools {
 
   _finishPlacing() {
     if (!this.placing) return;
-    this._alignToLink(this.placing.entity);
+    this._mateToLink(this.placing.entity, true);
     this.app.store.selectOnly(this.placing.entity.id);
     this.placing = null;
     this.app.store.commit(); // entity already in store; commit records it
   }
 
-  // Supports/sliders dropped on a link auto-orient to that link (still editable).
-  _alignToLink(e) {
-    if (!['sliderSlot', 'rollerSupport', 'pinSupport'].includes(e.type)) return;
+  // Live preview of the prefab under the cursor before the first click.
+  _updateGhost(w) {
+    const g = createEntity(this.placeType, w);
+    const link = this._mateToLink(g, true, true); // mate, exclude nothing (ghost not in store)
+    this.ghost = g;
+    this.app.overlay.ghost = g;
+    this.app.overlay.mateTarget = link;
+  }
+
+  // Mate a slider/support to the nearest link: orient to it and (optionally) snap
+  // its position onto the bar. Returns the link it mated to, or null. The mate is
+  // only a starting point — every value stays editable in Properties afterward.
+  _mateToLink(e, snapPos = false) {
+    if (!['sliderSlot', 'rollerSupport', 'pinSupport'].includes(e.type)) return null;
     const p = { x: e.x, y: e.y };
-    let best = null, bestD = 0.5;
+    let best = null, bestD = 0.6, proj = null;
     for (const o of this.app.store.entities) {
-      if (o.type !== 'link') continue;
+      if (o.type !== 'link' || o.id === e.id) continue;
       const r = pointSegment(p, { x: o.x1, y: o.y1 }, { x: o.x2, y: o.y2 });
-      if (r.dist < bestD) { bestD = r.dist; best = o; }
+      if (r.dist < bestD) { bestD = r.dist; best = o; proj = r.point; }
     }
-    if (!best) return;
+    if (!best) return null;
     const ang = deg(V.angle(V.sub({ x: best.x2, y: best.y2 }, { x: best.x1, y: best.y1 })));
     e.angle = e.type === 'sliderSlot' ? ang : ang - 90; // slider slides along; supports stand perpendicular
+    if (snapPos && proj) { e.x = proj.x; e.y = proj.y; }
+    return best;
   }
 
   _cancelPlacing() {

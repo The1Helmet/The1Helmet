@@ -14,7 +14,7 @@ const app = {
   cam: new Camera(),
   svg: document.getElementById('canvas'),
   showGrid: true,
-  overlay: { snap: null, marquee: null, cursor: 'default' },
+  overlay: { snap: null, marquee: null, cursor: 'default', ghost: null, mateTarget: null },
   render() { render(); },
 };
 app.tools = new Tools(app);
@@ -39,6 +39,20 @@ function render() {
     const pen = new Pen(app.cam);
     try { DEFS[e.type].draw(e, pen, { selected: app.store.selection.has(e.id), scale: app.cam.scale }); } catch (_) {}
     out.push(`<g class="ent">${pen.out()}</g>`);
+  }
+
+  // mate highlight: the link a hovered support/slider would snap onto
+  if (app.overlay.mateTarget) {
+    const o = app.overlay.mateTarget;
+    const a = app.cam.toScreen({ x: o.x1, y: o.y1 }), c = app.cam.toScreen({ x: o.x2, y: o.y2 });
+    out.push(`<line x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${c.x.toFixed(1)}" y2="${c.y.toFixed(1)}" stroke="${SEL}" stroke-width="${(o.w || 5) + 5}" stroke-linecap="round" opacity="0.28"/>`);
+  }
+
+  // ghost preview of the prefab about to be placed
+  if (app.overlay.ghost) {
+    const pen = new Pen(app.cam);
+    try { DEFS[app.overlay.ghost.type].draw(app.overlay.ghost, pen, { selected: false, scale: app.cam.scale }); } catch (_) {}
+    out.push(`<g opacity="0.5" style="pointer-events:none">${pen.out()}</g>`);
   }
 
   // selection: bounds box + handles
@@ -97,6 +111,11 @@ app.svg.addEventListener('pointermove', (e) => {
 window.addEventListener('pointerup', (e) => app.tools.onPointerUp(e));
 app.svg.addEventListener('wheel', (e) => app.tools.onWheel(e), { passive: false });
 app.svg.addEventListener('contextmenu', (e) => e.preventDefault());
+app.svg.addEventListener('pointerleave', () => {
+  if (app.tools.drag) return; // keep state mid-gesture
+  app.overlay.snap = null; app.overlay.ghost = null; app.overlay.mateTarget = null;
+  app.tools.ghost = null; render();
+});
 window.addEventListener('resize', render);
 
 // ---- actions ----------------------------------------------------------------

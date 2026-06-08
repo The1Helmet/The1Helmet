@@ -27,9 +27,15 @@ npm run web        # serves at http://localhost:5173
 ## How it works
 
 - **Left panel — Prefab palette.** Click a prefab, then click on the canvas to
-  place it. Single-click prefabs drop in one spot; multi-click ones let you set
-  endpoints (e.g. a *Link* = 2 clicks, an *Angular dimension* = 3 clicks: vertex,
-  arm 1, arm 2). Press **Esc** to finish/cancel and return to Select.
+  place it. A translucent **ghost preview** follows the cursor so you see what
+  you're about to drop. Single-click prefabs drop in one spot; multi-click ones
+  let you set endpoints (e.g. a *Link* = 2 clicks, an *Angular dimension* =
+  3 clicks: vertex, arm 1, arm 2). Press **Esc** to finish/cancel and return to
+  Select.
+- **Mate-to-link.** Hover a *slider-in-slot*, *roller* or *pin support* over a
+  link and it snaps **onto** the bar and orients to it live (the target link is
+  highlighted) — the slider slides *along* the bar, supports stand
+  *perpendicular*. It's just a starting point; every value stays editable.
 - **Canvas — Draft here.** Pan with middle-mouse or **Space-drag**, zoom with the
   wheel. The cursor **snaps** to joints, endpoints and the grid (orange marker).
 - **Right panel — Properties.** Select an object to edit every dimension/parameter
