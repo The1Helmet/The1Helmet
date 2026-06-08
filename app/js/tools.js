@@ -1,7 +1,7 @@
 // Pointer interaction + tool state machine: Select (pick / move / edit handles /
 // marquee), Place (spawn prefabs with 1–3 clicks), and panning / zooming.
 // Snapping gives the CAD feel: cursor locks onto joints, endpoints and the grid.
-import { V } from './geometry.js';
+import { V, deg, pointSegment } from './geometry.js';
 import { DEFS, createEntity } from './entities.js';
 
 // How many clicks each prefab needs, and which handle each click drives.
@@ -226,9 +226,25 @@ export class Tools {
 
   _finishPlacing() {
     if (!this.placing) return;
+    this._alignToLink(this.placing.entity);
     this.app.store.selectOnly(this.placing.entity.id);
     this.placing = null;
     this.app.store.commit(); // entity already in store; commit records it
+  }
+
+  // Supports/sliders dropped on a link auto-orient to that link (still editable).
+  _alignToLink(e) {
+    if (!['sliderSlot', 'rollerSupport', 'pinSupport'].includes(e.type)) return;
+    const p = { x: e.x, y: e.y };
+    let best = null, bestD = 0.5;
+    for (const o of this.app.store.entities) {
+      if (o.type !== 'link') continue;
+      const r = pointSegment(p, { x: o.x1, y: o.y1 }, { x: o.x2, y: o.y2 });
+      if (r.dist < bestD) { bestD = r.dist; best = o; }
+    }
+    if (!best) return;
+    const ang = deg(V.angle(V.sub({ x: best.x2, y: best.y2 }, { x: best.x1, y: best.y1 })));
+    e.angle = e.type === 'sliderSlot' ? ang : ang - 90; // slider slides along; supports stand perpendicular
   }
 
   _cancelPlacing() {

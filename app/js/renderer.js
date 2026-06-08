@@ -4,12 +4,30 @@
 import { V, rad } from './geometry.js';
 
 export const INK = '#14181f';
-export const DIM_COLOR = '#1b3a6b';
-export const VEC_COLOR = '#c0392b';
+export const DIM_COLOR = '#202020';   // dimensions in (near) black, like the source docs
+export const VEC_COLOR = '#c0392b';   // velocity / reaction vectors in red
 export const SEL = '#2d7ef7';
 export const HANDLE = '#2d7ef7';
 
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+// Parse "v_A", "F_{RAx}", "w_2" into runs with subscript flags so labels render
+// with real subscripts (engineering variable convention).
+function parseLabel(s) {
+  const runs = []; let i = 0; const str = String(s);
+  while (i < str.length) {
+    const u = str.indexOf('_', i);
+    if (u < 0) { runs.push({ t: str.slice(i), sub: false }); break; }
+    if (u > i) runs.push({ t: str.slice(i, u), sub: false });
+    if (str[u + 1] === '{') {
+      const end = str.indexOf('}', u + 2);
+      const stop = end < 0 ? str.length : end;
+      runs.push({ t: str.slice(u + 2, stop), sub: true });
+      i = end < 0 ? str.length : end + 1;
+    } else { runs.push({ t: str.slice(u + 1, u + 2), sub: true }); i = u + 2; }
+  }
+  return runs.length ? runs : [{ t: str, sub: false }];
+}
 
 export class Pen {
   constructor(cam) {
@@ -84,15 +102,24 @@ export class Pen {
     const color = o.color ?? INK;
     let transform = '';
     if (o.rotate) transform = ` transform="rotate(${(o.rotate * 180 / Math.PI).toFixed(2)} ${P.x.toFixed(2)} ${P.y.toFixed(2)})"`;
+    // Build subscript-aware content; keep the running baseline-shift correct.
+    const runs = parseLabel(str);
+    const visibleLen = runs.reduce((n, r) => n + r.t.length, 0);
+    let shift = 0; const sub = size * 0.22;
+    const inner = runs.map((r) => {
+      const want = r.sub ? sub : 0; const dy = want - shift; shift = want;
+      const fs = r.sub ? (size * 0.72).toFixed(1) : size;
+      return `<tspan dy="${dy.toFixed(2)}" font-size="${fs}">${esc(r.t)}</tspan>`;
+    }).join('');
     let bg = '';
     if (o.bg) {
-      const w = String(str).length * size * 0.6 + 6, h = size + 4;
+      const w = visibleLen * size * 0.6 + 6, h = size + 4;
       let bx = P.x, by = P.y - h / 2;
       if (anchor === 'middle') bx -= w / 2; else if (anchor === 'end') bx -= w;
       bg = `<rect x="${bx.toFixed(2)}" y="${by.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" fill="${o.bg}" ${transform}/>`;
     }
     this._out.push(
-      `${bg}<text x="${P.x.toFixed(2)}" y="${P.y.toFixed(2)}" font-family="${o.font ?? 'Cambria, Georgia, serif'}" font-size="${size}" font-style="${o.italic ? 'italic' : 'normal'}" font-weight="${o.weight ?? 'normal'}" fill="${color}" text-anchor="${anchor}" dominant-baseline="${baseline}"${transform}>${esc(str)}</text>`
+      `${bg}<text x="${P.x.toFixed(2)}" y="${P.y.toFixed(2)}" font-family="${o.font ?? 'Cambria, Georgia, serif'}" font-size="${size}" font-style="${o.italic ? 'italic' : 'normal'}" font-weight="${o.weight ?? 'normal'}" fill="${color}" text-anchor="${anchor}" dominant-baseline="${baseline}"${transform}>${inner}</text>`
     );
   }
 

@@ -43,7 +43,7 @@ export const DEFS = {
   // ======================= STRUCTURE =======================
   node: def({
     name: 'Pin joint', category: 'Structure', pts: [['x', 'y']],
-    defaults: (at) => ({ x: at.x, y: at.y, r: 6, label: '' }),
+    defaults: (at) => ({ x: at.x, y: at.y, r: 5, label: '' }),
     params: [
       { key: 'r', label: 'Radius (px)', type: 'number', min: 2, max: 40, step: 1 },
       { key: 'label', label: 'Label', type: 'text' },
@@ -56,7 +56,7 @@ export const DEFS = {
 
   link: def({
     name: 'Link / bar', category: 'Structure', pts: [['x1', 'y1'], ['x2', 'y2']],
-    defaults: (at) => ({ x1: at.x, y1: at.y, x2: at.x + 2, y2: at.y, w: 6, label: '' }),
+    defaults: (at) => ({ x1: at.x, y1: at.y, x2: at.x + 2, y2: at.y, w: 5, label: '' }),
     params: [
       { key: 'w', label: 'Thickness (px)', type: 'number', min: 1, max: 24, step: 1 },
       { key: 'label', label: 'Label', type: 'text' },
@@ -172,7 +172,7 @@ export const DEFS = {
   // ======================= LOADS =======================
   force: def({
     name: 'Force (point load)', category: 'Loads', pts: [['x', 'y']],
-    defaults: (at) => ({ x: at.x, y: at.y, angle: 90, length: 1.3, label: 'F', color: VEC_COLOR }),
+    defaults: (at) => ({ x: at.x, y: at.y, angle: 90, length: 1.3, label: 'F', color: INK }),
     params: [
       { key: 'angle', label: 'Direction°', type: 'number', step: 5 },
       { key: 'length', label: 'Arrow length', type: 'number', min: 0.2, step: 0.1 },
@@ -199,7 +199,7 @@ export const DEFS = {
 
   distributed: def({
     name: 'Distributed load', category: 'Loads', pts: [['x1', 'y1'], ['x2', 'y2']],
-    defaults: (at) => ({ x1: at.x, y1: at.y, x2: at.x + 3, y2: at.y, shape: 'uniform', peak: 1.0, side: 1, count: 6, label: 'q', color: VEC_COLOR }),
+    defaults: (at) => ({ x1: at.x, y1: at.y, x2: at.x + 3, y2: at.y, shape: 'uniform', peak: 1.0, side: 1, count: 6, label: 'q', color: INK }),
     params: [
       { key: 'shape', label: 'Shape', type: 'select', options: [{ v: 'uniform', t: 'Uniform' }, { v: 'triangular', t: 'Triangular ▶' }, { v: 'triangular2', t: 'Triangular ◀' }] },
       { key: 'peak', label: 'Height', type: 'number', min: 0.1, step: 0.1 },
