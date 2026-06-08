@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Helmet CAD</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="toolbar">
+    <span class="brand">⛑ Helmet&nbsp;CAD</span>
+    <span class="sep"></span>
+    <button data-cmd="new" title="New (Ctrl+N)">New</button>
+    <button data-cmd="open" title="Open (Ctrl+O)">Open</button>
+    <button data-cmd="save" title="Save (Ctrl+S)">Save</button>
+    <button data-cmd="saveAs" title="Save As (Ctrl+Shift+S)">Save As</button>
+    <span class="sep"></span>
+    <button data-cmd="undo" title="Undo (Ctrl+Z)">↶ Undo</button>
+    <button data-cmd="redo" title="Redo (Ctrl+Shift+Z)">↷ Redo</button>
+    <button data-cmd="delete" title="Delete (Del)">🗑 Delete</button>
+    <button data-cmd="duplicate" title="Duplicate (Ctrl+D)">⧉ Duplicate</button>
+    <span class="sep"></span>
+    <button data-cmd="zoomFit" title="Zoom to fit (Ctrl+0)">⤢ Fit</button>
+    <button data-cmd="toggleGrid" title="Toggle grid (G)">▦ Grid</button>
+    <button data-cmd="toggleSnap" title="Toggle snap (Ctrl+Shift+G)">⌖ Snap</button>
+    <span class="spacer"></span>
+    <button class="accent" data-cmd="blueprint" title="Blueprint (Ctrl+B)">📐 Blueprint</button>
+  </div>
+
+  <div id="workspace">
+    <aside id="palette" class="panel-left"></aside>
+    <main id="stage">
+      <svg id="canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+    </main>
+    <aside id="properties" class="panel-right"></aside>
+  </div>
+
+  <div id="statusbar">
+    <span id="st-file">Untitled</span>
+    <span class="sep"></span>
+    <span id="st-pos">x 0.00  y 0.00</span>
+    <span class="spacer"></span>
+    <span id="st-count">0 objects</span>
+    <span id="st-snap">Snap On</span>
+    <span id="st-grid">Grid On</span>
+    <span id="st-zoom">Zoom 60px/u</span>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
