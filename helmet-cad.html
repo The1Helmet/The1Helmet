@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Helmet CAD</title>
+<style>
+:root {
+  --bg: #2b2f36;
+  --panel: #333942;
+  --panel-2: #3b424c;
+  --line: #232831;
+  --text: #e6e9ee;
+  --muted: #9aa3af;
+  --accent: #2d7ef7;
+  --accent-2: #1b6fe0;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px; color: var(--text); background: var(--bg);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* ---- toolbar ---- */
+#toolbar {
+  display: flex; align-items: center; gap: 4px; padding: 6px 10px;
+  background: var(--panel); border-bottom: 1px solid var(--line); flex: 0 0 auto;
+}
+#toolbar .brand { font-weight: 700; letter-spacing: .3px; margin-right: 6px; }
+#toolbar button {
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+  border-radius: 6px; padding: 5px 9px; cursor: pointer; font-size: 12px;
+}
+#toolbar button:hover { background: #454d59; }
+#toolbar button.accent { background: var(--accent); border-color: var(--accent-2); }
+#toolbar button.accent:hover { background: var(--accent-2); }
+.sep { width: 1px; height: 22px; background: var(--line); margin: 0 6px; }
+.spacer { flex: 1; }
+
+/* ---- workspace ---- */
+#workspace { flex: 1; display: flex; min-height: 0; }
+.panel-left { width: 220px; }
+.panel-right { width: 250px; }
+.panel-left, .panel-right {
+  background: var(--panel); overflow-y: auto; flex: 0 0 auto;
+}
+.panel-left { border-right: 1px solid var(--line); padding: 8px; }
+.panel-right { border-left: 1px solid var(--line); padding: 10px; }
+#stage { flex: 1; min-width: 0; position: relative; background: #e9edf2; }
+#canvas { position: absolute; inset: 0; width: 100%; height: 100%; background: #ffffff;
+  background-image: radial-gradient(#00000008 1px, transparent 0); }
+
+/* ---- palette ---- */
+.tool-btn {
+  width: 100%; text-align: left; background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; cursor: pointer; margin-bottom: 8px;
+}
+.tool-btn.active, .prefab.active { outline: 2px solid var(--accent); border-color: var(--accent); }
+.cat { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin: 10px 2px 6px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.prefab {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px;
+  padding: 7px 4px; cursor: pointer; color: var(--text);
+}
+.prefab:hover { background: #454d59; }
+.prefab .thumb { background: #fff; border-radius: 4px; padding: 2px; line-height: 0; }
+.prefab .pname { font-size: 10.5px; text-align: center; line-height: 1.15; color: var(--muted); }
+
+/* ---- properties ---- */
+.prop-head { font-weight: 700; font-size: 13px; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.prop-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+.prop-row > span { color: var(--muted); flex: 0 0 96px; }
+.prop-row input, .prop-row select, .prop-row output {
+  flex: 1; min-width: 0; background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px; font-size: 12px;
+}
+.prop-row input[type=checkbox] { flex: 0 0 auto; width: 16px; height: 16px; }
+.prop-row input[type=color] { flex: 0 0 44px; height: 26px; padding: 1px; }
+.prop-row output { background: transparent; border: none; color: var(--text); text-align: right; }
+.prop-empty { color: var(--muted); line-height: 1.5; }
+.prop-empty span { font-size: 12px; }
+
+/* ---- status bar ---- */
+#statusbar {
+  display: flex; align-items: center; gap: 12px; padding: 4px 12px;
+  background: var(--panel); border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); flex: 0 0 auto;
+}
+#statusbar .sep { height: 14px; }
+
+/* ---- modal ---- */
+.modal-backdrop { position: fixed; inset: 0; background: #0008; display: flex; align-items: center; justify-content: center; z-index: 50; }
+.modal { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 22px; max-width: 460px; box-shadow: 0 18px 60px #000a; }
+.modal h2 { margin: 0 0 12px; font-size: 18px; }
+.modal p { line-height: 1.55; color: var(--text); }
+.modal p.muted { color: var(--muted); font-size: 12px; }
+.modal .badge { font-size: 11px; background: var(--accent); color: #fff; border-radius: 20px; padding: 2px 9px; vertical-align: middle; margin-left: 6px; }
+.modal-actions { text-align: right; margin-top: 16px; }
+.modal-actions button { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 8px 16px; cursor: pointer; }
+.modal-actions button:hover { background: var(--accent-2); }
+
+</style>
+</head>
+<body>
+
+  <div id="toolbar">
+    <span class="brand">⛑ Helmet&nbsp;CAD</span>
+    <span class="sep"></span>
+    <button data-cmd="new" title="New (Ctrl+N)">New</button>
+    <button data-cmd="open" title="Open (Ctrl+O)">Open</button>
+    <button data-cmd="save" title="Save (Ctrl+S)">Save</button>
+    <button data-cmd="saveAs" title="Save As (Ctrl+Shift+S)">Save As</button>
+    <span class="sep"></span>
+    <button data-cmd="undo" title="Undo (Ctrl+Z)">↶ Undo</button>
+    <button data-cmd="redo" title="Redo (Ctrl+Shift+Z)">↷ Redo</button>
+    <button data-cmd="delete" title="Delete (Del)">🗑 Delete</button>
+    <button data-cmd="duplicate" title="Duplicate (Ctrl+D)">⧉ Duplicate</button>
+    <span class="sep"></span>
+    <button data-cmd="zoomFit" title="Zoom to fit (Ctrl+0)">⤢ Fit</button>
+    <button data-cmd="toggleGrid" title="Toggle grid (G)">▦ Grid</button>
+    <button data-cmd="toggleSnap" title="Toggle snap (Ctrl+Shift+G)">⌖ Snap</button>
+    <span class="spacer"></span>
+    <button class="accent" data-cmd="blueprint" title="Blueprint (Ctrl+B)">📐 Blueprint</button>
+  </div>
+
+  <div id="workspace">
+    <aside id="palette" class="panel-left"></aside>
+    <main id="stage">
+      <svg id="canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+    </main>
+    <aside id="properties" class="panel-right"></aside>
+  </div>
+
+  <div id="statusbar">
+    <span id="st-file">Untitled</span>
+    <span class="sep"></span>
+    <span id="st-pos">x 0.00  y 0.00</span>
+    <span class="spacer"></span>
+    <span id="st-count">0 objects</span>
+    <span id="st-snap">Snap On</span>
+    <span id="st-grid">Grid On</span>
+    <span id="st-zoom">Zoom 60px/u</span>
+  </div>
+
+  
+
+<script>
+"use strict";
+(function(){
+// ===== geometry.js =====
+// 2D vector math and small geometry helpers used across the app.
+// World coordinates use mathematical orientation (Y points up).
+
+const V = {
+  add: (a, b) => ({ x: a.x + b.x, y: a.y + b.y }),
+  sub: (a, b) => ({ x: a.x - b.x, y: a.y - b.y }),
+  scale: (a, s) => ({ x: a.x * s, y: a.y * s }),
+  len: (a) => Math.hypot(a.x, a.y),
+  dist: (a, b) => Math.hypot(a.x - b.x, a.y - b.y),
+  norm: (a) => { const l = Math.hypot(a.x, a.y) || 1; return { x: a.x / l, y: a.y / l }; },
+  // perpendicular (rotate +90°)
+  perp: (a) => ({ x: -a.y, y: a.x }),
+  dot: (a, b) => a.x * b.x + a.y * b.y,
+  cross: (a, b) => a.x * b.y - a.y * b.x,
+  angle: (a) => Math.atan2(a.y, a.x),
+  fromAngle: (rad, len = 1) => ({ x: Math.cos(rad) * len, y: Math.sin(rad) * len }),
+  rotate: (a, rad, about = { x: 0, y: 0 }) => {
+    const c = Math.cos(rad), s = Math.sin(rad);
+    const dx = a.x - about.x, dy = a.y - about.y;
+    return { x: about.x + dx * c - dy * s, y: about.y + dx * s + dy * c };
+  },
+  mid: (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }),
+  clone: (a) => ({ x: a.x, y: a.y }),
+};
+
+const deg = (rad) => rad * 180 / Math.PI;
+const rad = (d) => d * Math.PI / 180;
+
+// Normalize an angle (radians) to (-PI, PI].
+function normAngle(a) {
+  while (a <= -Math.PI) a += 2 * Math.PI;
+  while (a > Math.PI) a -= 2 * Math.PI;
+  return a;
+}
+
+// Distance from point p to segment a-b, plus the closest point on it.
+function pointSegment(p, a, b) {
+  const ab = V.sub(b, a);
+  const t = Math.max(0, Math.min(1, V.dot(V.sub(p, a), ab) / (V.dot(ab, ab) || 1)));
+  const proj = V.add(a, V.scale(ab, t));
+  return { dist: V.dist(p, proj), point: proj, t };
+}
+
+// Intersection of two infinite lines, each given by a point + direction.
+function lineIntersect(p1, d1, p2, d2) {
+  const denom = V.cross(d1, d2);
+  if (Math.abs(denom) < 1e-9) return null; // parallel
+  const t = V.cross(V.sub(p2, p1), d2) / denom;
+  return V.add(p1, V.scale(d1, t));
+}
+
+// Round to a sensible number of decimals for display.
+function fmt(n, decimals = 2) {
+  if (!isFinite(n)) return '0';
+  const r = Math.round(n * 10 ** decimals) / 10 ** decimals;
+  return String(r).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+}
+
+let _id = 1;
+function uid(prefix = 'e') { return `${prefix}${(_id++).toString(36)}${Date.now().toString(36).slice(-3)}`; }
+
+
+// ===== camera.js =====
+// Viewport transform: maps world coordinates (Y up, meters) to screen pixels.
+// screen.x = (world.x - panX) * scale
+// screen.y = (-world.y - panY) * scale    (Y flipped so up is up)
+class Camera {
+  constructor() {
+    this.scale = 60;     // pixels per world unit
+    this.panX = -2;      // world coords at screen origin (after Y flip for y)
+    this.panY = -7;
+  }
+
+  toScreen(p) {
+    return { x: (p.x - this.panX) * this.scale, y: (-p.y - this.panY) * this.scale };
+  }
+
+  toWorld(s) {
+    return { x: s.x / this.scale + this.panX, y: -(s.y / this.scale + this.panY) };
+  }
+
+  // Zoom keeping the world point under the cursor fixed on screen.
+  zoomAt(screenPt, factor) {
+    const before = this.toWorld(screenPt);
+    this.scale = Math.max(4, Math.min(2000, this.scale * factor));
+    const after = this.toWorld(screenPt);
+    this.panX += before.x - after.x;
+    this.panY += (-before.y) - (-after.y);
+  }
+
+  panBy(dxScreen, dyScreen) {
+    this.panX -= dxScreen / this.scale;
+    this.panY -= dyScreen / this.scale;
+  }
+
+  // Fit the given world bounds {minX,minY,maxX,maxY} into the viewport.
+  fit(bounds, width, height, pad = 60) {
+    if (!bounds || !isFinite(bounds.minX)) return;
+    const w = Math.max(0.5, bounds.maxX - bounds.minX);
+    const h = Math.max(0.5, bounds.maxY - bounds.minY);
+    this.scale = Math.max(4, Math.min(2000, Math.min((width - 2 * pad) / w, (height - 2 * pad) / h)));
+    const cx = (bounds.minX + bounds.maxX) / 2;
+    const cy = (bounds.minY + bounds.maxY) / 2;
+    this.panX = cx - width / 2 / this.scale;
+    this.panY = -cy - height / 2 / this.scale;
+  }
+}
+
+
+// ===== renderer.js =====
+// SVG renderer. Entities draw through a "pen" that takes WORLD coordinates and
+// emits SVG markup, converting via the camera. This keeps entity code free of
+// pixel/zoom concerns and makes vector export (future Blueprint feature) trivial.
+
+const INK = '#14181f';
+const DIM_COLOR = '#202020';   // dimensions in (near) black, like the source docs
+const VEC_COLOR = '#c0392b';   // velocity / reaction vectors in red
+const SEL = '#2d7ef7';
+const HANDLE = '#2d7ef7';
+
+function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+// Parse "v_A", "F_{RAx}", "w_2" into runs with subscript flags so labels render
+// with real subscripts (engineering variable convention).
+function parseLabel(s) {
+  const runs = []; let i = 0; const str = String(s);
+  while (i < str.length) {
+    const u = str.indexOf('_', i);
+    if (u < 0) { runs.push({ t: str.slice(i), sub: false }); break; }
+    if (u > i) runs.push({ t: str.slice(i, u), sub: false });
+    if (str[u + 1] === '{') {
+      const end = str.indexOf('}', u + 2);
+      const stop = end < 0 ? str.length : end;
+      runs.push({ t: str.slice(u + 2, stop), sub: true });
+      i = end < 0 ? str.length : end + 1;
+    } else { runs.push({ t: str.slice(u + 1, u + 2), sub: true }); i = u + 2; }
+  }
+  return runs.length ? runs : [{ t: str, sub: false }];
+}
+
+class Pen {
+  constructor(cam) {
+    this.cam = cam;
+    this.scale = cam.scale;
+    this._out = [];
+  }
+  _p(w) { return this.cam.toScreen(w); }       // world -> screen point
+  _xy(w) { const s = this._p(w); return `${s.x.toFixed(2)},${s.y.toFixed(2)}`; }
+  out() { return this._out.join(''); }
+
+  _attrs(o = {}) {
+    const stroke = o.stroke ?? INK;
+    const w = o.w ?? 1.5;
+    let a = `stroke="${stroke}" stroke-width="${w}" fill="${o.fill ?? 'none'}"`;
+    if (o.cap) a += ` stroke-linecap="${o.cap}"`;
+    if (o.join) a += ` stroke-linejoin="${o.join}"`;
+    if (o.dash) a += ` stroke-dasharray="${o.dash}"`;
+    if (o.opacity != null) a += ` opacity="${o.opacity}"`;
+    return a;
+  }
+
+  line(a, b, o = {}) {
+    const A = this._p(a), B = this._p(b);
+    this._out.push(`<line x1="${A.x.toFixed(2)}" y1="${A.y.toFixed(2)}" x2="${B.x.toFixed(2)}" y2="${B.y.toFixed(2)}" ${this._attrs(o)}/>`);
+  }
+
+  poly(points, o = {}) {
+    const pts = points.map((p) => this._xy(p)).join(' ');
+    const tag = o.close ? 'polygon' : 'polyline';
+    this._out.push(`<${tag} points="${pts}" ${this._attrs(o)}/>`);
+  }
+
+  circle(c, rWorld, o = {}) { this.circlePx(c, rWorld * this.scale, o); }
+
+  circlePx(c, rPx, o = {}) {
+    const C = this._p(c);
+    this._out.push(`<circle cx="${C.x.toFixed(2)}" cy="${C.y.toFixed(2)}" r="${Math.max(0, rPx).toFixed(2)}" ${this._attrs(o)}/>`);
+  }
+
+  // Arc by world center & radius, from a0 to a1 (radians, world/math angles).
+  arc(c, rWorld, a0, a1, o = {}) {
+    const seg = [];
+    const steps = Math.max(8, Math.ceil(Math.abs(a1 - a0) / (Math.PI / 36)));
+    for (let i = 0; i <= steps; i++) {
+      const a = a0 + (a1 - a0) * (i / steps);
+      seg.push(this._xy(V.add(c, V.fromAngle(a, rWorld))));
+    }
+    this._out.push(`<polyline points="${seg.join(' ')}" ${this._attrs(o)}/>`);
+  }
+
+  // Filled arrowhead with tip at world point `tip`, pointing along world angle.
+  arrow(tip, dirRad, o = {}) {
+    const size = o.sizePx ?? 11;
+    const wing = o.wing ?? 0.38;
+    const T = this._p(tip);
+    // Screen direction: world dir has Y up; screen Y is down, so negate y.
+    const dx = Math.cos(dirRad), dy = -Math.sin(dirRad);
+    const px = -dy, py = dx;
+    const bx = T.x - dx * size, by = T.y - dy * size;
+    const p1 = `${(bx + px * size * wing).toFixed(2)},${(by + py * size * wing).toFixed(2)}`;
+    const p2 = `${(bx - px * size * wing).toFixed(2)},${(by - py * size * wing).toFixed(2)}`;
+    const fill = o.fill ?? o.stroke ?? INK;
+    this._out.push(`<polygon points="${T.x.toFixed(2)},${T.y.toFixed(2)} ${p1} ${p2}" fill="${fill}" stroke="${fill}" stroke-width="0.5"/>`);
+  }
+
+  text(pos, str, o = {}) {
+    const P = this._p(pos);
+    const size = o.sizePx ?? 14;
+    const anchor = o.anchor ?? 'middle';
+    const baseline = o.baseline ?? 'middle';
+    const color = o.color ?? INK;
+    let transform = '';
+    if (o.rotate) transform = ` transform="rotate(${(o.rotate * 180 / Math.PI).toFixed(2)} ${P.x.toFixed(2)} ${P.y.toFixed(2)})"`;
+    // Build subscript-aware content; keep the running baseline-shift correct.
+    const runs = parseLabel(str);
+    const visibleLen = runs.reduce((n, r) => n + r.t.length, 0);
+    let shift = 0; const sub = size * 0.22;
+    const inner = runs.map((r) => {
+      const want = r.sub ? sub : 0; const dy = want - shift; shift = want;
+      const fs = r.sub ? (size * 0.72).toFixed(1) : size;
+      return `<tspan dy="${dy.toFixed(2)}" font-size="${fs}">${esc(r.t)}</tspan>`;
+    }).join('');
+    let bg = '';
+    if (o.bg) {
+      const w = visibleLen * size * 0.6 + 6, h = size + 4;
+      let bx = P.x, by = P.y - h / 2;
+      if (anchor === 'middle') bx -= w / 2; else if (anchor === 'end') bx -= w;
+      bg = `<rect x="${bx.toFixed(2)}" y="${by.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" fill="${o.bg}" ${transform}/>`;
+    }
+    this._out.push(
+      `${bg}<text x="${P.x.toFixed(2)}" y="${P.y.toFixed(2)}" font-family="${o.font ?? 'Cambria, Georgia, serif'}" font-size="${size}" font-style="${o.italic ? 'italic' : 'normal'}" font-weight="${o.weight ?? 'normal'}" fill="${color}" text-anchor="${anchor}" dominant-baseline="${baseline}"${transform}>${inner}</text>`
+    );
+  }
+
+  // Ground hatching: short 45° ticks along baseline a->b, on the given side (±1).
+  hatch(a, b, o = {}) {
+    const spacing = (o.spacingPx ?? 9) / this.scale;
+    const len = (o.lenPx ?? 9) / this.scale;
+    const dir = V.norm(V.sub(b, a));
+    const total = V.dist(a, b);
+    const side = (o.side ?? 1);
+    // hatch direction: 45° from baseline, toward `side`
+    const n = V.scale(V.perp(dir), side);
+    const hd = V.norm(V.add(V.scale(dir, -1), n)); // points back-and-out (45°)
+    this.line(a, b, { stroke: o.stroke ?? INK, w: o.w ?? 1.4 });
+    let d = spacing * 0.5;
+    while (d < total) {
+      const base = V.add(a, V.scale(dir, d));
+      this.line(base, V.add(base, V.scale(hd, len)), { stroke: o.stroke ?? INK, w: o.w ?? 1 });
+      d += spacing;
+    }
+  }
+}
+
+// Builds the static grid + axes background as an SVG string.
+function renderGrid(cam, width, height, show) {
+  if (!show) return '';
+  const out = [];
+  const tl = cam.toWorld({ x: 0, y: 0 });
+  const br = cam.toWorld({ x: width, y: height });
+  let step = 1;
+  // choose grid step so lines are ~>=14px apart
+  while (step * cam.scale < 14) step *= 5;
+  while (step * cam.scale > 90) step /= 5;
+  const x0 = Math.floor(Math.min(tl.x, br.x) / step) * step;
+  const x1 = Math.ceil(Math.max(tl.x, br.x) / step) * step;
+  const y0 = Math.floor(Math.min(tl.y, br.y) / step) * step;
+  const y1 = Math.ceil(Math.max(tl.y, br.y) / step) * step;
+  for (let x = x0; x <= x1; x += step) {
+    const major = Math.abs(x % (step * 5)) < 1e-6;
+    const a = cam.toScreen({ x, y: y0 }), b = cam.toScreen({ x, y: y1 });
+    out.push(`<line x1="${a.x.toFixed(1)}" y1="0" x2="${a.x.toFixed(1)}" y2="${height}" stroke="${major ? '#dfe4ea' : '#eef1f5'}" stroke-width="1"/>`);
+  }
+  for (let y = y0; y <= y1; y += step) {
+    const major = Math.abs(y % (step * 5)) < 1e-6;
+    const a = cam.toScreen({ x: x0, y });
+    out.push(`<line x1="0" y1="${a.y.toFixed(1)}" x2="${width}" y2="${a.y.toFixed(1)}" stroke="${major ? '#dfe4ea' : '#eef1f5'}" stroke-width="1"/>`);
+  }
+  // world origin
+  const o = cam.toScreen({ x: 0, y: 0 });
+  out.push(`<line x1="${o.x}" y1="0" x2="${o.x}" y2="${height}" stroke="#c7cfda" stroke-width="1.2"/>`);
+  out.push(`<line x1="0" y1="${o.y}" x2="${width}" y2="${o.y}" stroke="#c7cfda" stroke-width="1.2"/>`);
+  return out.join('');
+}
+
+
+// ===== entities.js =====
+// Parametric entity definitions. Each entity is a plain data object {type, ...params};
+// its behaviour (defaults, editable fields, handles, drawing) lives in a DEFS entry.
+// All params are world-space; angles are stored in DEGREES for friendlier editing.
+
+// ---- small helpers ----------------------------------------------------------
+const P = (e, kx, ky) => ({ x: e[kx], y: e[ky] });
+const setP = (e, kx, ky, p) => { e[kx] = p.x; e[ky] = p.y; };
+
+function boundsOf(points, pad = 0) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of points) { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }
+  return { minX: minX - pad, minY: minY - pad, maxX: maxX + pad, maxY: maxY + pad };
+}
+
+// Draw a curved arrow (used by moment / omega). dir: +1 = CCW, -1 = CW.
+function arcArrow(pen, c, r, startDeg, sweepDeg, dir, color, w) {
+  const a0 = rad(startDeg);
+  const a1 = a0 + rad(sweepDeg) * dir;
+  pen.arc(c, r, a0, a1, { stroke: color, w });
+  const tip = V.add(c, V.fromAngle(a1, r));
+  const tan = a1 + (dir > 0 ? Math.PI / 2 : -Math.PI / 2);
+  pen.arrow(tip, tan, { sizePx: 11, fill: color });
+}
+
+// Generic factory: fills in handles/anchors/translate/bounds from a `pts` list
+// of [xKey,yKey] coordinate pairs unless the spec overrides them.
+function def(spec) {
+  const pts = spec.pts || [];
+  const d = { snap: true, ...spec };
+  if (!d.handles) d.handles = (e) => pts.map(([kx, ky], i) => ({ key: `p${i}`, x: e[kx], y: e[ky] }));
+  if (!d.applyHandle) d.applyHandle = (e, key, w) => {
+    const i = Number(key.slice(1)); if (pts[i]) setP(e, pts[i][0], pts[i][1], w);
+  };
+  if (!d.anchors) d.anchors = (e) => pts.map(([kx, ky]) => ({ x: e[kx], y: e[ky] }));
+  if (!d.translate) d.translate = (e, dd) => pts.forEach(([kx, ky]) => { e[kx] += dd.x; e[ky] += dd.y; });
+  if (!d.bounds) d.bounds = (e) => boundsOf(pts.map(([kx, ky]) => ({ x: e[kx], y: e[ky] })), 0.3);
+  return d;
+}
+
+const DEFS = {
+  // ======================= STRUCTURE =======================
+  node: def({
+    name: 'Pin joint', category: 'Structure', pts: [['x', 'y']],
+    defaults: (at) => ({ x: at.x, y: at.y, r: 5, label: '' }),
+    params: [
+      { key: 'r', label: 'Radius (px)', type: 'number', min: 2, max: 40, step: 1 },
+      { key: 'label', label: 'Label', type: 'text' },
+    ],
+    draw: (e, pen) => {
+      pen.circlePx({ x: e.x, y: e.y }, e.r, { stroke: INK, w: 1.8, fill: '#fff' });
+      if (e.label) pen.text(V.add(P(e, 'x', 'y'), { x: 0.18, y: 0.18 }), e.label, { sizePx: 15, anchor: 'start', italic: true });
+    },
+  }),
+
+  link: def({
+    name: 'Link / bar', category: 'Structure', pts: [['x1', 'y1'], ['x2', 'y2']],
+    defaults: (at) => ({ x1: at.x, y1: at.y, x2: at.x + 2, y2: at.y, w: 5, label: '' }),
+    params: [
+      { key: 'w', label: 'Thickness (px)', type: 'number', min: 1, max: 24, step: 1 },
+      { key: 'label', label: 'Label', type: 'text' },
+      { key: 'length', label: 'Length', type: 'readonly' },
+      { key: 'angle', label: 'Angle°', type: 'readonly' },
+    ],
+    compute: (e) => ({
+      length: fmt(V.dist(P(e, 'x1', 'y1'), P(e, 'x2', 'y2')), 3),
+      angle: fmt(deg(V.angle(V.sub(P(e, 'x2', 'y2'), P(e, 'x1', 'y1')))), 1),
+    }),
+    anchors: (e) => [P(e, 'x1', 'y1'), P(e, 'x2', 'y2'), V.mid(P(e, 'x1', 'y1'), P(e, 'x2', 'y2'))],
+    draw: (e, pen) => {
+      const a = P(e, 'x1', 'y1'), b = P(e, 'x2', 'y2');
+      pen.line(a, b, { stroke: INK, w: e.w, cap: 'round' });
+      if (e.label) pen.text(V.add(V.mid(a, b), { x: 0, y: 0.25 }), e.label, { sizePx: 15, italic: true });
+    },
+  }),
+
+  // ======================= SUPPORTS =======================
+  fixedWall: def({
+    name: 'Fixed wall (ground)', category: 'Supports', pts: [['x1', 'y1'], ['x2', 'y2']],
+    defaults: (at) => ({ x1: at.x - 1, y1: at.y, x2: at.x + 1, y2: at.y, side: 1 }),
+    params: [{ key: 'side', label: 'Hatch side', type: 'select', options: [{ v: 1, t: 'Left/Up' }, { v: -1, t: 'Right/Down' }] }],
+    draw: (e, pen) => pen.hatch(P(e, 'x1', 'y1'), P(e, 'x2', 'y2'), { side: Number(e.side), w: 1.6 }),
+  }),
+
+  pinSupport: def({
+    name: 'Pin support (hinge)', category: 'Supports', pts: [['x', 'y']],
+    defaults: (at) => ({ x: at.x, y: at.y, angle: 270, size: 0.7, hatch: true }),
+    params: [
+      { key: 'angle', label: 'Direction°', type: 'number', step: 5 },
+      { key: 'size', label: 'Size', type: 'number', min: 0.1, step: 0.1 },
+      { key: 'hatch', label: 'Ground hatch', type: 'bool' },
+    ],
+    bounds: (e) => boundsOf([P(e, 'x', 'y')], e.size * 1.4),
+    draw: (e, pen) => drawTriSupport(e, pen, false),
+  }),
+
+  rollerSupport: def({
+    name: 'Roller support', category: 'Supports', pts: [['x', 'y']],
+    defaults: (at) => ({ x: at.x, y: at.y, angle: 270, size: 0.7, hatch: true }),
+    params: [
+      { key: 'angle', label: 'Direction°', type: 'number', step: 5 },
+      { key: 'size', label: 'Size', type: 'number', min: 0.1, step: 0.1 },
+      { key: 'hatch', label: 'Ground hatch', type: 'bool' },
+    ],
+    bounds: (e) => boundsOf([P(e, 'x', 'y')], e.size * 1.7),
+    draw: (e, pen) => drawTriSupport(e, pen, true),
+  }),
+
+  sliderSlot: def({
+    name: 'Slider in slot', category: 'Supports', pts: [['x', 'y']],
+    defaults: (at) => ({ x: at.x, y: at.y, angle: 0, blockW: 0.9, blockH: 0.5, side: 1, guideLen: 2.4, hatch: true }),
+    params: [
+      { key: 'angle', label: 'Surface°', type: 'number', step: 5 },
+      { key: 'blockW', label: 'Block width', type: 'number', min: 0.1, step: 0.1 },
+      { key: 'blockH', label: 'Block height', type: 'number', min: 0.1, step: 0.1 },
+      { key: 'guideLen', label: 'Guide length', type: 'number', min: 0.2, step: 0.2 },
+      { key: 'side', label: 'Hatch side', type: 'select', options: [{ v: 1, t: 'Above' }, { v: -1, t: 'Below' }] },
+      { key: 'hatch', label: 'Ground hatch', type: 'bool' },
+    ],
+    bounds: (e) => boundsOf([P(e, 'x', 'y')], Math.max(e.guideLen, e.blockW)),
+    draw: (e, pen) => {
+      const c = P(e, 'x', 'y');
+      const u = V.fromAngle(rad(e.angle)); const n = V.scale(V.perp(u), Number(e.side));
+      const surfOff = V.scale(n, e.blockH / 2);
+      const sCenter = V.add(c, surfOff);
+      const ga = V.add(sCenter, V.scale(u, e.guideLen / 2)), gb = V.add(sCenter, V.scale(u, -e.guideLen / 2));
+      if (e.hatch) pen.hatch(gb, ga, { side: Number(e.side), w: 1.6 });
+      else pen.line(gb, ga, { w: 1.6 });
+      // slider block
+      const hw = V.scale(u, e.blockW / 2), hh = V.scale(n, e.blockH / 2);
+      pen.poly([V.add(V.add(c, hw), hh), V.add(V.sub(c, hw), hh), V.sub(V.sub(c, hw), hh), V.sub(V.add(c, hw), hh)], { close: true, w: 1.6, fill: '#fff' });
+      pen.circlePx(c, 5.5, { stroke: INK, w: 1.6, fill: '#fff' });
+    },
+  }),
+
+  piston: def({
+    name: 'Piston / cylinder', category: 'Structure', pts: [['x', 'y']],
+    defaults: (at) => ({ x: at.x, y: at.y, angle: 0, bore: 0.8, cylLen: 1.8, rodLen: 1.2, headT: 0.28, wall: 0.12 }),
+    params: [
+      { key: 'angle', label: 'Direction°', type: 'number', step: 5 },
+      { key: 'bore', label: 'Bore', type: 'number', min: 0.1, step: 0.05 },
+      { key: 'cylLen', label: 'Cylinder length', type: 'number', min: 0.2, step: 0.1 },
+      { key: 'rodLen', label: 'Rod length', type: 'number', min: 0.1, step: 0.1 },
+      { key: 'headT', label: 'Head thickness', type: 'number', min: 0.05, step: 0.02 },
+      { key: 'wall', label: 'Wall', type: 'number', min: 0.02, step: 0.02 },
+    ],
+    bounds: (e) => boundsOf([P(e, 'x', 'y')], e.cylLen + e.rodLen),
+    draw: (e, pen) => {
+      const pin = P(e, 'x', 'y');
+      const u = V.fromAngle(rad(e.angle)); const n = V.perp(u);
+      const half = e.bore / 2, outer = half + e.wall;
+      const A = V.add(pin, V.scale(u, -e.rodLen));          // front face of head
+      const headBack = V.add(A, V.scale(u, -e.headT));
+      const cylBack = V.add(A, V.scale(u, -e.cylLen));
+      // cylinder U (open toward pin)
+      pen.poly([
+        V.add(A, V.scale(n, outer)), V.add(cylBack, V.scale(n, outer)),
+        V.add(cylBack, V.scale(n, -outer)), V.add(A, V.scale(n, -outer)),
+      ], { w: 1.8 });
+      // piston head
+      pen.poly([
+        V.add(A, V.scale(n, half)), V.add(headBack, V.scale(n, half)),
+        V.add(headBack, V.scale(n, -half)), V.add(A, V.scale(n, -half)),
+      ], { close: true, w: 1.6, fill: '#eef1f5' });
+      // rod + pin
+      pen.line(V.add(A, V.scale(u, -e.headT / 2)), pin, { w: 4, cap: 'round' });
+      pen.circlePx(pin, 5.5, { stroke: INK, w: 1.6, fill: '#fff' });
+    },
+  }),
+
+  // ======================= LOADS =======================
+  force: def({
+    name: 'Force (point load)', category: 'Loads', pts: [['x', 'y']],
+    defaults: (at) => ({ x: at.x, y: at.y, angle: 90, length: 1.3, label: 'F', color: INK }),
+    params: [
+      { key: 'angle', label: 'Direction°', type: 'number', step: 5 },
+      { key: 'length', label: 'Arrow length', type: 'number', min: 0.2, step: 0.1 },
+      { key: 'label', label: 'Label', type: 'text' },
+      { key: 'color', label: 'Color', type: 'color' },
+    ],
+    handles: (e) => [
+      { key: 'p0', x: e.x, y: e.y },
+      { key: 'tail', x: e.x - Math.cos(rad(e.angle)) * e.length, y: e.y - Math.sin(rad(e.angle)) * e.length },
+    ],
+    applyHandle: (e, key, w) => {
+      if (key === 'p0') { e.x = w.x; e.y = w.y; }
+      else { const d = V.sub(P(e, 'x', 'y'), w); e.length = Math.max(0.1, V.len(d)); e.angle = deg(V.angle(d)); }
+    },
+    bounds: (e) => boundsOf([P(e, 'x', 'y'), { x: e.x - Math.cos(rad(e.angle)) * e.length, y: e.y - Math.sin(rad(e.angle)) * e.length }], 0.3),
+    draw: (e, pen) => {
+      const tip = P(e, 'x', 'y');
+      const tail = V.add(tip, V.fromAngle(rad(e.angle), -e.length));
+      pen.line(tail, tip, { stroke: e.color, w: 2.2 });
+      pen.arrow(tip, rad(e.angle), { sizePx: 12, fill: e.color });
+      if (e.label) pen.text(V.add(tail, V.fromAngle(rad(e.angle), -0.25)), e.label, { sizePx: 16, color: e.color, weight: 'bold', bg: '#ffffffcc' });
+    },
+  }),
+
+  distributed: def({
+    name: 'Distributed load', category: 'Loads', pts: [['x1', 'y1'], ['x2', 'y2']],
+    defaults: (at) => ({ x1: at.x, y1: at.y, x2: at.x + 3, y2: at.y, shape: 'uniform', peak: 1.0, side: 1, count: 6, label: 'q', color: INK }),
+    params: [
+      { key: 'shape', label: 'Shape', type: 'select', options: [{ v: 'uniform', t: 'Uniform' }, { v: 'triangular', t: 'Triangular ▶' }, { v: 'triangular2', t: 'Triangular ◀' }] },
+      { key: 'peak', label: 'Height', type: 'number', min: 0.1, step: 0.1 },
+      { key: 'count', label: 'Arrows', type: 'number', min: 2, max: 40, step: 1 },
+      { key: 'side', label: 'Side', type: 'select', options: [{ v: 1, t: 'Left/Up' }, { v: -1, t: 'Right/Down' }] },
+      { key: 'label', label: 'Label', type: 'text' },
+      { key: 'color', label: 'Color', type: 'color' },
+    ],
+    anchors: (e) => [P(e, 'x1', 'y1'), P(e, 'x2', 'y2'), V.mid(P(e, 'x1', 'y1'), P(e, 'x2', 'y2'))],
+    bounds: (e) => boundsOf([P(e, 'x1', 'y1'), P(e, 'x2', 'y2')], e.peak + 0.3),
+    draw: (e, pen) => {
+      const a = P(e, 'x1', 'y1'), b = P(e, 'x2', 'y2');
+      const dir = V.sub(b, a); const L = V.len(dir) || 1; const u = V.scale(dir, 1 / L);
+      const n = V.scale(V.perp(u), Number(e.side));
+      const prof = (t) => e.shape === 'uniform' ? e.peak : e.shape === 'triangular' ? e.peak * t : e.peak * (1 - t);
+      const topPts = [];
+      const N = Math.max(2, Math.round(e.count));
+      for (let i = 0; i <= N; i++) {
+        const t = i / N; const base = V.add(a, V.scale(u, L * t)); const h = prof(t);
+        const top = V.add(base, V.scale(n, h));
+        topPts.push(top);
+        if (h > 1e-3) { pen.line(top, base, { stroke: e.color, w: 1.4 }); pen.arrow(base, V.angle(V.scale(n, -1)), { sizePx: 8, fill: e.color }); }
+      }
+      pen.poly(topPts, { stroke: e.color, w: 1.6 });
+      if (e.label) pen.text(V.add(V.mid(a, b), V.scale(n, e.peak + 0.25)), e.label, { sizePx: 15, color: e.color, italic: true, bg: '#ffffffcc' });
+    },
+  }),
+
+  moment: def({
+    name: 'Moment', category: 'Loads', pts: [['x', 'y']],
+    defaults: (at) => ({ x: at.x, y: at.y, r: 0.5, dir: 1, start: 60, sweep: 270, label: 'M', color: INK }),
+    params: [
+      { key: 'r', label: 'Radius', type: 'number', min: 0.1, step: 0.05 },
+      { key: 'dir', label: 'Direction', type: 'select', options: [{ v: 1, t: 'CCW ↺' }, { v: -1, t: 'CW ↻' }] },
+      { key: 'start', label: 'Start°', type: 'number', step: 5 },
+      { key: 'sweep', label: 'Sweep°', type: 'number', min: 10, max: 350, step: 5 },
+      { key: 'label', label: 'Label', type: 'text' },
+      { key: 'color', label: 'Color', type: 'color' },
+    ],
+    bounds: (e) => boundsOf([P(e, 'x', 'y')], e.r + 0.3),
+    draw: (e, pen) => {
+      arcArrow(pen, P(e, 'x', 'y'), e.r, e.start, e.sweep, Number(e.dir), e.color, 2);
+      if (e.label) pen.text(V.add(P(e, 'x', 'y'), { x: e.r + 0.25, y: 0 }), e.label, { sizePx: 15, color: e.color, anchor: 'start', italic: true });
+    },
+  }),
+
+  // ======================= VECTORS =======================
+  vector: def({
+    name: 'Vector (v / a)', category: 'Vectors', pts: [['x', 'y']],
+    defaults: (at) => ({ x: at.x, y: at.y, angle: 0, length: 1.2, label: 'v', color: VEC_COLOR }),
+    params: [
+      { key: 'angle', label: 'Direction°', type: 'number', step: 5 },
+      { key: 'length', label: 'Length', type: 'number', min: 0.1, step: 0.1 },
+      { key: 'label', label: 'Label', type: 'text' },
+      { key: 'color', label: 'Color', type: 'color' },
+    ],
+    handles: (e) => [
+      { key: 'p0', x: e.x, y: e.y },
+      { key: 'tip', x: e.x + Math.cos(rad(e.angle)) * e.length, y: e.y + Math.sin(rad(e.angle)) * e.length },
+    ],
+    applyHandle: (e, key, w) => {
+      if (key === 'p0') { e.x = w.x; e.y = w.y; }
+      else { const d = V.sub(w, P(e, 'x', 'y')); e.length = Math.max(0.1, V.len(d)); e.angle = deg(V.angle(d)); }
+    },
+    bounds: (e) => boundsOf([P(e, 'x', 'y'), { x: e.x + Math.cos(rad(e.angle)) * e.length, y: e.y + Math.sin(rad(e.angle)) * e.length }], 0.3),
+    draw: (e, pen) => {
+      const tail = P(e, 'x', 'y'); const tip = V.add(tail, V.fromAngle(rad(e.angle), e.length));
+      pen.line(tail, tip, { stroke: e.color, w: 2.2 });
+      pen.arrow(tip, rad(e.angle), { sizePx: 11, fill: e.color });
+      if (e.label) pen.text(V.add(tip, V.fromAngle(rad(e.angle), 0.22)), e.label, { sizePx: 15, color: e.color, italic: true, weight: 'bold', bg: '#ffffffcc' });
+    },
+  }),
+
+  omega: def({
+    name: 'Angular velocity ω', category: 'Vectors', pts: [['x', 'y']],
+    defaults: (at) => ({ x: at.x, y: at.y, r: 0.45, dir: 1, start: 120, sweep: 220, label: 'ω', color: INK }),
+    params: [
+      { key: 'r', label: 'Radius', type: 'number', min: 0.1, step: 0.05 },
+      { key: 'dir', label: 'Direction', type: 'select', options: [{ v: 1, t: 'CCW ↺' }, { v: -1, t: 'CW ↻' }] },
+      { key: 'start', label: 'Start°', type: 'number', step: 5 },
+      { key: 'sweep', label: 'Sweep°', type: 'number', min: 10, max: 350, step: 5 },
+      { key: 'label', label: 'Label', type: 'text' },
+      { key: 'color', label: 'Color', type: 'color' },
+    ],
+    bounds: (e) => boundsOf([P(e, 'x', 'y')], e.r + 0.3),
+    draw: (e, pen) => {
+      arcArrow(pen, P(e, 'x', 'y'), e.r, e.start, e.sweep, Number(e.dir), e.color, 2);
+      if (e.label) pen.text(V.add(P(e, 'x', 'y'), { x: 0, y: 0 }), e.label, { sizePx: 16, color: e.color, italic: true });
+    },
+  }),
+
+  axes: def({
+    name: 'Coordinate axes', category: 'Vectors', pts: [['x', 'y']],
+    defaults: (at) => ({ x: at.x, y: at.y, length: 1.6, labelX: 'x', labelY: 'y' }),
+    params: [
+      { key: 'length', label: 'Length', type: 'number', min: 0.3, step: 0.1 },
+      { key: 'labelX', label: 'X label', type: 'text' },
+      { key: 'labelY', label: 'Y label', type: 'text' },
+    ],
+    bounds: (e) => boundsOf([P(e, 'x', 'y'), { x: e.x + e.length, y: e.y + e.length }], 0.3),
+    draw: (e, pen) => {
+      const o = P(e, 'x', 'y');
+      const xt = V.add(o, { x: e.length, y: 0 }), yt = V.add(o, { x: 0, y: e.length });
+      pen.line(o, xt, { w: 1.6 }); pen.arrow(xt, 0, { sizePx: 10 });
+      pen.line(o, yt, { w: 1.6 }); pen.arrow(yt, Math.PI / 2, { sizePx: 10 });
+      pen.text(V.add(xt, { x: 0.2, y: 0 }), e.labelX, { sizePx: 15, italic: true });
+      pen.text(V.add(yt, { x: 0, y: 0.22 }), e.labelY, { sizePx: 15, italic: true });
+    },
+  }),
+
+  // ======================= DIMENSIONS =======================
+  dimLinear: def({
+    name: 'Linear dimension', category: 'Dimensions', snap: false, pts: [['x1', 'y1'], ['x2', 'y2']],
+    defaults: (at) => ({ x1: at.x, y1: at.y, x2: at.x + 2, y2: at.y, offset: 0.8, text: '', unit: '', decimals: 2 }),
+    params: [
+      { key: 'offset', label: 'Offset', type: 'number', step: 0.1 },
+      { key: 'unit', label: 'Unit', type: 'text' },
+      { key: 'decimals', label: 'Decimals', type: 'number', min: 0, max: 4, step: 1 },
+      { key: 'text', label: 'Override text', type: 'text' },
+    ],
+    handles: (e) => {
+      const a = P(e, 'x1', 'y1'), b = P(e, 'x2', 'y2');
+      const n = V.scale(V.perp(V.norm(V.sub(b, a))), e.offset);
+      const m = V.add(V.mid(a, b), n);
+      return [{ key: 'p0', x: a.x, y: a.y }, { key: 'p1', x: b.x, y: b.y }, { key: 'off', x: m.x, y: m.y }];
+    },
+    applyHandle: (e, key, w) => {
+      if (key === 'p0') setP(e, 'x1', 'y1', w);
+      else if (key === 'p1') setP(e, 'x2', 'y2', w);
+      else {
+        const a = P(e, 'x1', 'y1'), b = P(e, 'x2', 'y2');
+        const n = V.perp(V.norm(V.sub(b, a)));
+        e.offset = V.dot(V.sub(w, V.mid(a, b)), n);
+      }
+    },
+    bounds: (e) => {
+      const a = P(e, 'x1', 'y1'), b = P(e, 'x2', 'y2');
+      const n = V.scale(V.perp(V.norm(V.sub(b, a))), e.offset);
+      return boundsOf([a, b, V.add(a, n), V.add(b, n)], 0.3);
+    },
+    draw: (e, pen) => {
+      const a = P(e, 'x1', 'y1'), b = P(e, 'x2', 'y2');
+      const u = V.norm(V.sub(b, a)); const n = V.perp(u);
+      const off = V.scale(n, e.offset);
+      const da = V.add(a, off), db = V.add(b, off);
+      const ext = V.scale(n, Math.sign(e.offset || 1) * 0.12);
+      // extension lines
+      pen.line(V.add(a, V.scale(n, e.offset * 0.06)), V.add(da, ext), { stroke: DIM_COLOR, w: 1 });
+      pen.line(V.add(b, V.scale(n, e.offset * 0.06)), V.add(db, ext), { stroke: DIM_COLOR, w: 1 });
+      // dimension line + arrows pointing outward to the witness points
+      pen.line(da, db, { stroke: DIM_COLOR, w: 1.2 });
+      pen.arrow(da, V.angle(V.scale(u, -1)), { sizePx: 9, fill: DIM_COLOR });
+      pen.arrow(db, V.angle(u), { sizePx: 9, fill: DIM_COLOR });
+      const txt = e.text || (fmt(V.dist(a, b), e.decimals) + (e.unit ? ' ' + e.unit : ''));
+      let ang = V.angle(u); if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI; // keep upright
+      pen.text(V.add(V.mid(da, db), V.scale(n, 0.18)), txt, { sizePx: 14, color: DIM_COLOR, rotate: -ang, bg: '#ffffffd9' });
+    },
+  }),
+
+  dimAngular: def({
+    name: 'Angular dimension', category: 'Dimensions', snap: false, pts: [['vx', 'vy'], ['x1', 'y1'], ['x2', 'y2']],
+    defaults: (at) => ({ vx: at.x, vy: at.y, x1: at.x + 1.5, y1: at.y, x2: at.x + 1, y2: at.y + 1.1, radius: 0.9, text: '', decimals: 1 }),
+    params: [
+      { key: 'radius', label: 'Arc radius', type: 'number', min: 0.1, step: 0.1 },
+      { key: 'decimals', label: 'Decimals', type: 'number', min: 0, max: 3, step: 1 },
+      { key: 'text', label: 'Override text', type: 'text' },
+    ],
+    handles: (e) => {
+      const v = P(e, 'vx', 'vy');
+      const am = (V.angle(V.sub(P(e, 'x1', 'y1'), v)) + V.angle(V.sub(P(e, 'x2', 'y2'), v))) / 2;
+      const mid = V.add(v, V.fromAngle(am, e.radius));
+      return [{ key: 'p0', x: e.vx, y: e.vy }, { key: 'p1', x: e.x1, y: e.y1 }, { key: 'p2', x: e.x2, y: e.y2 }, { key: 'rad', x: mid.x, y: mid.y }];
+    },
+    applyHandle: (e, key, w) => {
+      if (key === 'p0') setP(e, 'vx', 'vy', w);
+      else if (key === 'p1') setP(e, 'x1', 'y1', w);
+      else if (key === 'p2') setP(e, 'x2', 'y2', w);
+      else e.radius = Math.max(0.1, V.dist(P(e, 'vx', 'vy'), w));
+    },
+    bounds: (e) => boundsOf([P(e, 'vx', 'vy'), P(e, 'x1', 'y1'), P(e, 'x2', 'y2')], e.radius),
+    draw: (e, pen) => {
+      const v = P(e, 'vx', 'vy');
+      let a1 = V.angle(V.sub(P(e, 'x1', 'y1'), v));
+      let a2 = V.angle(V.sub(P(e, 'x2', 'y2'), v));
+      let dA = normAngle(a2 - a1);            // signed shortest sweep
+      const r = e.radius;
+      // extension lines along the two arms
+      pen.line(v, V.add(v, V.fromAngle(a1, r + 0.18)), { stroke: DIM_COLOR, w: 1 });
+      pen.line(v, V.add(v, V.fromAngle(a2, r + 0.18)), { stroke: DIM_COLOR, w: 1 });
+      pen.arc(v, r, a1, a1 + dA, { stroke: DIM_COLOR, w: 1.2 });
+      pen.arrow(V.add(v, V.fromAngle(a1, r)), a1 + (dA > 0 ? Math.PI / 2 : -Math.PI / 2), { sizePx: 8, fill: DIM_COLOR });
+      pen.arrow(V.add(v, V.fromAngle(a1 + dA, r)), a1 + dA + (dA > 0 ? -Math.PI / 2 : Math.PI / 2), { sizePx: 8, fill: DIM_COLOR });
+      const txt = e.text || (fmt(Math.abs(deg(dA)), e.decimals) + '°');
+      pen.text(V.add(v, V.fromAngle(a1 + dA / 2, r + 0.28)), txt, { sizePx: 14, color: DIM_COLOR, bg: '#ffffffd9' });
+    },
+  }),
+
+  dimRadius: def({
+    name: 'Radius / diameter', category: 'Dimensions', snap: false, pts: [['cx', 'cy']],
+    defaults: (at) => ({ cx: at.x, cy: at.y, r: 0.6, angle: 45, prefix: 'R', text: '', decimals: 2 }),
+    params: [
+      { key: 'r', label: 'Radius', type: 'number', min: 0.01, step: 0.05 },
+      { key: 'angle', label: 'Leader°', type: 'number', step: 5 },
+      { key: 'prefix', label: 'Prefix', type: 'select', options: [{ v: 'R', t: 'Radius R' }, { v: '⌀', t: 'Diameter ⌀' }] },
+      { key: 'decimals', label: 'Decimals', type: 'number', min: 0, max: 3, step: 1 },
+      { key: 'text', label: 'Override text', type: 'text' },
+    ],
+    handles: (e) => {
+      const tip = V.add(P(e, 'cx', 'cy'), V.fromAngle(rad(e.angle), e.r));
+      return [{ key: 'p0', x: e.cx, y: e.cy }, { key: 'tip', x: tip.x, y: tip.y }];
+    },
+    applyHandle: (e, key, w) => {
+      if (key === 'p0') setP(e, 'cx', 'cy', w);
+      else { const d = V.sub(w, P(e, 'cx', 'cy')); e.r = Math.max(0.01, V.len(d)); e.angle = deg(V.angle(d)); }
+    },
+    bounds: (e) => boundsOf([P(e, 'cx', 'cy')], e.r + 0.4),
+    draw: (e, pen) => {
+      const c = P(e, 'cx', 'cy'); const tip = V.add(c, V.fromAngle(rad(e.angle), e.r));
+      const out = V.add(c, V.fromAngle(rad(e.angle), e.r + 0.4));
+      pen.line(c, out, { stroke: DIM_COLOR, w: 1.1 });
+      pen.arrow(tip, rad(e.angle), { sizePx: 9, fill: DIM_COLOR });
+      const val = e.prefix === '⌀' ? e.r * 2 : e.r;
+      const txt = e.text || (e.prefix + fmt(val, e.decimals));
+      pen.text(V.add(out, { x: 0.1, y: 0 }), txt, { sizePx: 14, color: DIM_COLOR, anchor: 'start', bg: '#ffffffd9' });
+    },
+  }),
+
+  dimCoord: def({
+    name: 'Coordinate', category: 'Dimensions', snap: false, pts: [['x', 'y']],
+    defaults: (at) => ({ x: at.x, y: at.y, lead: 0.8, decimals: 2 }),
+    params: [
+      { key: 'lead', label: 'Leader', type: 'number', step: 0.1 },
+      { key: 'decimals', label: 'Decimals', type: 'number', min: 0, max: 4, step: 1 },
+    ],
+    bounds: (e) => boundsOf([P(e, 'x', 'y')], Math.abs(e.lead) + 0.6),
+    draw: (e, pen) => {
+      const c = P(e, 'x', 'y');
+      const t = V.add(c, { x: e.lead, y: e.lead });
+      pen.line(c, t, { stroke: DIM_COLOR, w: 1 });
+      pen.circlePx(c, 2.5, { fill: DIM_COLOR, stroke: DIM_COLOR });
+      pen.text(V.add(t, { x: 0.08, y: 0 }), `(${fmt(e.x, e.decimals)}, ${fmt(e.y, e.decimals)})`, { sizePx: 13, color: DIM_COLOR, anchor: 'start', bg: '#ffffffd9' });
+    },
+  }),
+
+  // ======================= ANNOTATION =======================
+  label: def({
+    name: 'Text label', category: 'Annotation', snap: false, pts: [['x', 'y']],
+    defaults: (at) => ({ x: at.x, y: at.y, text: 'Text', size: 16, angle: 0, italic: false }),
+    params: [
+      { key: 'text', label: 'Text', type: 'text' },
+      { key: 'size', label: 'Size (px)', type: 'number', min: 6, max: 72, step: 1 },
+      { key: 'angle', label: 'Angle°', type: 'number', step: 5 },
+      { key: 'italic', label: 'Italic', type: 'bool' },
+    ],
+    draw: (e, pen) => pen.text(P(e, 'x', 'y'), e.text, { sizePx: e.size, rotate: -rad(e.angle), italic: e.italic, anchor: 'start' }),
+  }),
+};
+
+// Shared drawing for pin/roller triangular supports.
+function drawTriSupport(e, pen, roller) {
+  const apex = P(e, 'x', 'y');
+  const down = V.fromAngle(rad(e.angle));
+  const baseC = V.add(apex, V.scale(down, e.size));
+  const bdir = V.perp(down);
+  const bh = e.size * 0.62;
+  const p1 = V.add(baseC, V.scale(bdir, bh)), p2 = V.add(baseC, V.scale(bdir, -bh));
+  pen.poly([apex, p1, p2], { close: true, w: 1.7, fill: '#fff' });
+  pen.circlePx(apex, 5, { stroke: INK, w: 1.6, fill: '#fff' });
+  let groundC = baseC;
+  if (roller) {
+    const rr = e.size * 0.16;
+    const off = V.scale(down, rr);
+    pen.circlePx(V.add(V.add(baseC, V.scale(bdir, bh * 0.5)), off), rr * pen.scale, { stroke: INK, w: 1.4, fill: '#fff' });
+    pen.circlePx(V.add(V.add(baseC, V.scale(bdir, -bh * 0.5)), off), rr * pen.scale, { stroke: INK, w: 1.4, fill: '#fff' });
+    groundC = V.add(baseC, V.scale(down, rr * 2));
+  }
+  const ga = V.add(groundC, V.scale(bdir, bh * 1.25)), gb = V.add(groundC, V.scale(bdir, -bh * 1.25));
+  if (e.hatch) pen.hatch(gb, ga, { side: 1, w: 1.4 });
+  else pen.line(gb, ga, { w: 1.4 });
+}
+
+// Factory: create a fresh entity of `type` placed at world point `at`.
+function createEntity(type, at) {
+  const d = DEFS[type];
+  if (!d) throw new Error('Unknown entity type: ' + type);
+  return { id: uid(), type, ...d.defaults(at) };
+}
+
+
+// ===== prefabs.js =====
+// The spawnable prefab catalog, grouped by category for the palette.
+// Derived from the entity definitions so the two never drift apart.
+
+const CATEGORY_ORDER = ['Structure', 'Supports', 'Loads', 'Vectors', 'Dimensions', 'Annotation'];
+
+function prefabGroups() {
+  const groups = new Map(CATEGORY_ORDER.map((c) => [c, []]));
+  for (const [type, d] of Object.entries(DEFS)) {
+    if (!groups.has(d.category)) groups.set(d.category, []);
+    groups.get(d.category).push({ type, name: d.name });
+  }
+  return [...groups.entries()].filter(([, items]) => items.length).map(([category, items]) => ({ category, items }));
+}
+
+
+// ===== store.js =====
+// Document model: the list of entities, the current selection, undo/redo
+// history, and (de)serialization. Emits 'change' so views can re-render.
+
+class Store {
+  constructor() {
+    this.entities = [];
+    this.selection = new Set();
+    this.filePath = null;
+    this.dirty = false;
+    this._undo = [];
+    this._redo = [];
+    this._subs = new Set();
+    this._snapshot = this._cap(); // baseline
+  }
+
+  // ---- pub/sub ----
+  subscribe(fn) { this._subs.add(fn); return () => this._subs.delete(fn); }
+  emit() { for (const fn of this._subs) fn(this); }
+
+  // ---- history ----
+  _cap() { return JSON.stringify(this.entities); }
+  commit() {
+    this._undo.push(this._snapshot);
+    if (this._undo.length > 200) this._undo.shift();
+    this._redo.length = 0;
+    this._snapshot = this._cap();
+    this.dirty = true;
+    this.emit();
+  }
+  undo() {
+    if (!this._undo.length) return;
+    this._redo.push(this._cap());
+    const s = this._undo.pop();
+    this.entities = JSON.parse(s);
+    this._snapshot = s;
+    this._pruneSelection();
+    this.dirty = true;
+    this.emit();
+  }
+  redo() {
+    if (!this._redo.length) return;
+    this._undo.push(this._cap());
+    const s = this._redo.pop();
+    this.entities = JSON.parse(s);
+    this._snapshot = s;
+    this._pruneSelection();
+    this.dirty = true;
+    this.emit();
+  }
+
+  // ---- entity ops ----
+  add(entity, { select = true, commit = true } = {}) {
+    this.entities.push(entity);
+    if (select) { this.selection.clear(); this.selection.add(entity.id); }
+    if (commit) this.commit(); else this.emit();
+    return entity;
+  }
+  remove(ids) {
+    const set = new Set(ids);
+    this.entities = this.entities.filter((e) => !set.has(e.id));
+    for (const id of ids) this.selection.delete(id);
+    this.commit();
+  }
+  get(id) { return this.entities.find((e) => e.id === id); }
+  byZ() { return this.entities; } // draw order = insertion order
+  _pruneSelection() {
+    const live = new Set(this.entities.map((e) => e.id));
+    for (const id of [...this.selection]) if (!live.has(id)) this.selection.delete(id);
+  }
+
+  // ---- selection ----
+  selectOnly(id) { this.selection.clear(); if (id) this.selection.add(id); this.emit(); }
+  toggle(id) { this.selection.has(id) ? this.selection.delete(id) : this.selection.add(id); this.emit(); }
+  selectAll() { this.selection = new Set(this.entities.map((e) => e.id)); this.emit(); }
+  clearSelection() { this.selection.clear(); this.emit(); }
+  selected() { return this.entities.filter((e) => this.selection.has(e.id)); }
+
+  // ---- file ----
+  serialize() {
+    return JSON.stringify({ app: 'helmet-cad', version: 1, entities: this.entities }, null, 2);
+  }
+  loadData(json) {
+    const data = typeof json === 'string' ? JSON.parse(json) : json;
+    if (!data || !Array.isArray(data.entities)) throw new Error('Not a Helmet CAD file');
+    // keep only entities whose type we understand
+    this.entities = data.entities.filter((e) => DEFS[e.type]);
+    this.selection.clear();
+    this._undo.length = 0; this._redo.length = 0;
+    this._snapshot = this._cap();
+    this.dirty = false;
+    this.emit();
+  }
+  newDocument() {
+    this.entities = []; this.selection.clear(); this.filePath = null;
+    this._undo.length = 0; this._redo.length = 0; this._snapshot = this._cap();
+    this.dirty = false; this.emit();
+  }
+}
+
+
+// ===== tools.js =====
+// Pointer interaction + tool state machine: Select (pick / move / edit handles /
+// marquee), Place (spawn prefabs with 1–3 clicks), and panning / zooming.
+// Snapping gives the CAD feel: cursor locks onto joints, endpoints and the grid.
+
+// How many clicks each prefab needs, and which handle each click drives.
+const PLACE_STEPS = {
+  node: ['p0'], link: ['p0', 'p1'], fixedWall: ['p0', 'p1'],
+  pinSupport: ['p0'], rollerSupport: ['p0'], sliderSlot: ['p0'], piston: ['p0'],
+  force: ['p0', 'tail'], distributed: ['p0', 'p1'], moment: ['p0'],
+  vector: ['p0', 'tip'], omega: ['p0'], axes: ['p0'],
+  dimLinear: ['p0', 'p1'], dimAngular: ['p0', 'p1', 'p2'],
+  dimRadius: ['p0'], dimCoord: ['p0'], label: ['p0'],
+};
+
+class Tools {
+  constructor(app) {
+    this.app = app;            // { store, cam, svg, render(), setTool(), overlay }
+    this.tool = 'select';      // 'select' | 'place'
+    this.placeType = null;
+    this.snapEnabled = true;
+    this.gridSnap = 0.25;
+    this.drag = null;          // active gesture
+    this.placing = null;       // in-progress placement
+  }
+
+  setTool(tool, placeType = null) {
+    this._cancelPlacing();
+    this.tool = tool;
+    this.placeType = placeType;
+    this.ghost = null;
+    this.app.overlay.ghost = null;
+    this.app.overlay.mateTarget = null;
+    this.app.overlay.cursor = tool === 'place' ? 'crosshair' : 'default';
+    this.app.render();
+  }
+
+  // ---- snapping ---------------------------------------------------------------
+  snap(world, excludeIds = new Set()) {
+    let best = null, bestD = 10 / this.app.cam.scale;
+    if (this.snapEnabled) {
+      for (const e of this.app.store.entities) {
+        const d = DEFS[e.type];
+        if (!d.snap || excludeIds.has(e.id)) continue;
+        for (const a of d.anchors(e)) {
+          const dist = V.dist(world, a);
+          if (dist < bestD) { bestD = dist; best = a; }
+        }
+      }
+    }
+    if (best) return { point: { x: best.x, y: best.y }, snapped: true, kind: 'point' };
+    if (this.snapEnabled && this.gridSnap > 0) {
+      const g = this.gridSnap;
+      return { point: { x: Math.round(world.x / g) * g, y: Math.round(world.y / g) * g }, snapped: true, kind: 'grid' };
+    }
+    return { point: world, snapped: false };
+  }
+
+  // ---- picking ----------------------------------------------------------------
+  // Skeleton used for hit-testing: handle points + segments between them.
+  _skeleton(e) {
+    const hs = DEFS[e.type].handles(e);
+    const pts = hs.map((h) => ({ x: h.x, y: h.y }));
+    const segs = [];
+    for (let i = 0; i + 1 < pts.length; i++) segs.push([pts[i], pts[i + 1]]);
+    return { pts, segs };
+  }
+
+  pickHandle(world) {
+    const tol = 9 / this.app.cam.scale;
+    for (const e of this.app.store.selected().reverse()) {
+      for (const h of DEFS[e.type].handles(e)) {
+        if (V.dist(world, h) <= tol) return { entity: e, handle: h.key };
+      }
+    }
+    return null;
+  }
+
+  pickEntity(world) {
+    const tol = 6 / this.app.cam.scale;
+    const ents = this.app.store.entities;
+    // pass 1: near the skeleton (lines/points)
+    for (let i = ents.length - 1; i >= 0; i--) {
+      const e = ents[i]; const sk = this._skeleton(e);
+      let d = Infinity;
+      for (const p of sk.pts) d = Math.min(d, V.dist(world, p));
+      for (const [a, b] of sk.segs) {
+        const ab = V.sub(b, a); const t = Math.max(0, Math.min(1, V.dot(V.sub(world, a), ab) / (V.dot(ab, ab) || 1)));
+        d = Math.min(d, V.dist(world, V.add(a, V.scale(ab, t))));
+      }
+      if (d <= tol) return e;
+    }
+    // pass 2: inside the bounding box (area-like prefabs: blocks, supports, text)
+    for (let i = ents.length - 1; i >= 0; i--) {
+      const e = ents[i]; const b = DEFS[e.type].bounds(e);
+      if (world.x >= b.minX && world.x <= b.maxX && world.y >= b.minY && world.y <= b.maxY) return e;
+    }
+    return null;
+  }
+
+  // ---- event helpers ----------------------------------------------------------
+  _evtWorld(ev) {
+    const r = this.app.svg.getBoundingClientRect();
+    return this.app.cam.toWorld({ x: ev.clientX - r.left, y: ev.clientY - r.top });
+  }
+  _evtScreen(ev) {
+    const r = this.app.svg.getBoundingClientRect();
+    return { x: ev.clientX - r.left, y: ev.clientY - r.top };
+  }
+
+  // ---- pointer handlers -------------------------------------------------------
+  onWheel(ev) {
+    ev.preventDefault();
+    const s = this._evtScreen(ev);
+    this.app.cam.zoomAt(s, ev.deltaY < 0 ? 1.12 : 1 / 1.12);
+    this.app.render();
+  }
+
+  onPointerDown(ev) {
+    if (ev.button === 1 || ev.button === 2 || ev.spaceKey) { // middle/right/space = pan
+      this.drag = { type: 'pan', last: this._evtScreen(ev) };
+      this.app.svg.setPointerCapture(ev.pointerId);
+      return;
+    }
+    const world = this._evtWorld(ev);
+
+    if (this.tool === 'place') { this._placeClick(world); return; }
+
+    // SELECT tool
+    const h = this.pickHandle(world);
+    if (h) {
+      this.drag = { type: 'handle', entity: h.entity, handle: h.handle, moved: false };
+      this.app.svg.setPointerCapture(ev.pointerId);
+      return;
+    }
+    const hit = this.pickEntity(world);
+    if (hit) {
+      if (ev.shiftKey) this.app.store.toggle(hit.id);
+      else if (!this.app.store.selection.has(hit.id)) this.app.store.selectOnly(hit.id);
+      const snap = this.snap(world, this.app.store.selection);
+      this.drag = { type: 'move', last: snap.point, moved: false };
+      this.app.svg.setPointerCapture(ev.pointerId);
+    } else {
+      if (!ev.shiftKey) this.app.store.clearSelection();
+      this.drag = { type: 'marquee', start: world, cur: world };
+      this.app.svg.setPointerCapture(ev.pointerId);
+    }
+    this.app.render();
+  }
+
+  onPointerMove(ev) {
+    const world = this._evtWorld(ev);
+    // live snap indicator
+    const snap = this.snap(world, this.drag && this.drag.type === 'handle' ? new Set([this.drag.entity.id]) : (this.drag && this.drag.type === 'move' ? this.app.store.selection : new Set()));
+    this.app.overlay.snap = snap.snapped ? snap.point : null;
+
+    if (this.placing) { this._placeHover(snap.point); this.app.render(); return; }
+
+    // Ghost preview of the prefab about to be placed (with live link-snapping).
+    if (this.tool === 'place' && !this.drag) { this._updateGhost(snap.point); this.app.render(); return; }
+
+    if (!this.drag) { this.app.render(); return; }
+
+    if (this.drag.type === 'pan') {
+      const s = this._evtScreen(ev);
+      this.app.cam.panBy(s.x - this.drag.last.x, s.y - this.drag.last.y);
+      this.drag.last = s; this.app.render(); return;
+    }
+    if (this.drag.type === 'handle') {
+      DEFS[this.drag.entity.type].applyHandle(this.drag.entity, this.drag.handle, snap.point);
+      this.drag.moved = true; this.app.store.emit(); this.app.render(); return;
+    }
+    if (this.drag.type === 'move') {
+      const d = V.sub(snap.point, this.drag.last);
+      if (d.x || d.y) {
+        for (const e of this.app.store.selected()) DEFS[e.type].translate(e, d);
+        this.drag.last = snap.point; this.drag.moved = true; this.app.store.emit();
+      }
+      this.app.render(); return;
+    }
+    if (this.drag.type === 'marquee') {
+      this.drag.cur = world; this.app.overlay.marquee = { a: this.drag.start, b: world }; this.app.render(); return;
+    }
+  }
+
+  onPointerUp(ev) {
+    if (!this.drag) return;
+    const d = this.drag; this.drag = null;
+    try { this.app.svg.releasePointerCapture(ev.pointerId); } catch (_) {}
+    if (d.type === 'marquee') {
+      this.app.overlay.marquee = null;
+      const r = { minX: Math.min(d.start.x, d.cur.x), maxX: Math.max(d.start.x, d.cur.x), minY: Math.min(d.start.y, d.cur.y), maxY: Math.max(d.start.y, d.cur.y) };
+      if (Math.abs(d.start.x - d.cur.x) > 0.02 || Math.abs(d.start.y - d.cur.y) > 0.02) {
+        for (const e of this.app.store.entities) {
+          const b = DEFS[e.type].bounds(e);
+          if (b.minX >= r.minX && b.maxX <= r.maxX && b.minY >= r.minY && b.maxY <= r.maxY) this.app.store.selection.add(e.id);
+        }
+        this.app.store.emit();
+      }
+    } else if ((d.type === 'move' || d.type === 'handle') && d.moved) {
+      this.app.store.commit();
+    }
+    this.app.render();
+  }
+
+  // ---- placement --------------------------------------------------------------
+  _placeClick(world) {
+    const snap = this.snap(world, this.placing ? new Set([this.placing.entity.id]) : new Set());
+    const w = snap.point;
+    this.ghost = null; this.app.overlay.ghost = null; this.app.overlay.mateTarget = null;
+    if (!this.placing) {
+      const e = createEntity(this.placeType, w);
+      this.app.store.add(e, { select: true, commit: false });
+      const steps = PLACE_STEPS[this.placeType] || ['p0'];
+      DEFS[e.type].applyHandle(e, steps[0], w);
+      this.placing = { entity: e, steps, idx: 1 };
+      if (steps.length === 1) this._finishPlacing();
+    } else {
+      const { entity, steps, idx } = this.placing;
+      DEFS[entity.type].applyHandle(entity, steps[idx], w);
+      this.placing.idx++;
+      if (this.placing.idx >= steps.length) this._finishPlacing();
+    }
+    this.app.store.emit(); this.app.render();
+  }
+
+  _placeHover(w) {
+    if (!this.placing) return;
+    const { entity, steps, idx } = this.placing;
+    if (idx < steps.length) DEFS[entity.type].applyHandle(entity, steps[idx], w);
+  }
+
+  _finishPlacing() {
+    if (!this.placing) return;
+    this._mateToLink(this.placing.entity, true);
+    this.app.store.selectOnly(this.placing.entity.id);
+    this.placing = null;
+    this.app.store.commit(); // entity already in store; commit records it
+  }
+
+  // Live preview of the prefab under the cursor before the first click.
+  _updateGhost(w) {
+    const g = createEntity(this.placeType, w);
+    const link = this._mateToLink(g, true, true); // mate, exclude nothing (ghost not in store)
+    this.ghost = g;
+    this.app.overlay.ghost = g;
+    this.app.overlay.mateTarget = link;
+  }
+
+  // Mate a slider/support to the nearest link: orient to it and (optionally) snap
+  // its position onto the bar. Returns the link it mated to, or null. The mate is
+  // only a starting point — every value stays editable in Properties afterward.
+  _mateToLink(e, snapPos = false) {
+    if (!['sliderSlot', 'rollerSupport', 'pinSupport'].includes(e.type)) return null;
+    const p = { x: e.x, y: e.y };
+    let best = null, bestD = 0.6, proj = null;
+    for (const o of this.app.store.entities) {
+      if (o.type !== 'link' || o.id === e.id) continue;
+      const r = pointSegment(p, { x: o.x1, y: o.y1 }, { x: o.x2, y: o.y2 });
+      if (r.dist < bestD) { bestD = r.dist; best = o; proj = r.point; }
+    }
+    if (!best) return null;
+    const ang = deg(V.angle(V.sub({ x: best.x2, y: best.y2 }, { x: best.x1, y: best.y1 })));
+    e.angle = e.type === 'sliderSlot' ? ang : ang - 90; // slider slides along; supports stand perpendicular
+    if (snapPos && proj) { e.x = proj.x; e.y = proj.y; }
+    return best;
+  }
+
+  _cancelPlacing() {
+    if (this.placing) {
+      this.app.store.remove([this.placing.entity.id]);
+      this.placing = null;
+    }
+  }
+
+  onEscape() {
+    if (this.placing) { this._cancelPlacing(); this.app.render(); }
+    this.setTool('select');
+  }
+}
+
+
+// ===== blueprint.js =====
+// Reserved hook for the future "Blueprint" feature (sheet border + title block,
+// scale, and PDF/SVG export to match the source documents). Intentionally a
+// stub for now — wired to the menu and toolbar so the slot exists.
+function openBlueprint(app) {
+  const existing = document.getElementById('bp-modal');
+  if (existing) existing.remove();
+  const m = document.createElement('div');
+  m.id = 'bp-modal';
+  m.className = 'modal-backdrop';
+  m.innerHTML = `
+    <div class="modal">
+      <h2>📐 Blueprint <span class="badge">coming soon</span></h2>
+      <p>This is the reserved slot for the Blueprint feature we'll build next.
+      Planned: a printable sheet (A4/A3) with border + title block, a drawing
+      scale, and export to <b>PDF / SVG</b> that matches your reference documents.</p>
+      <p class="muted">The drawing engine already renders to vector (SVG) world-space,
+      so this hook can wrap the current scene without changes to your prefabs.</p>
+      <div class="modal-actions"><button id="bp-close">Got it</button></div>
+    </div>`;
+  document.body.appendChild(m);
+  const close = () => m.remove();
+  m.addEventListener('click', (e) => { if (e.target === m) close(); });
+  m.querySelector('#bp-close').addEventListener('click', close);
+}
+
+
+// ===== panels.js =====
+// Left palette (spawnable prefabs with live thumbnails) and the right-hand
+// Properties panel (edit the selected entity's dimensions / parameters).
+
+// Render a prefab into a small standalone SVG thumbnail.
+function thumbnail(type, w = 46, h = 36) {
+  const e = createEntity(type, { x: 0, y: 0 });
+  // give two-point prefabs a sensible spread for the icon
+  if ('x2' in e) { e.x2 = 1.4; e.y2 = type === 'distributed' ? 0 : 0; }
+  const cam = new Camera();
+  const b = DEFS[type].bounds(e);
+  cam.fit(b, w, h, 8);
+  const pen = new Pen(cam);
+  DEFS[type].draw(e, pen, { selected: false, scale: cam.scale });
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${pen.out()}</svg>`;
+}
+
+class Palette {
+  constructor(el, app) { this.el = el; this.app = app; this.build(); }
+  build() {
+    const parts = ['<button class="tool-btn sel-tool active" data-tool="select">▣ Select / Move</button>'];
+    for (const g of prefabGroups()) {
+      parts.push(`<div class="cat">${g.category}</div><div class="grid">`);
+      for (const it of g.items) {
+        parts.push(`<button class="prefab" data-type="${it.type}" title="${it.name}"><span class="thumb">${thumbnail(it.type)}</span><span class="pname">${it.name}</span></button>`);
+      }
+      parts.push('</div>');
+    }
+    this.el.innerHTML = parts.join('');
+    this.el.addEventListener('click', (ev) => {
+      const sel = ev.target.closest('.sel-tool');
+      if (sel) { this.app.tools.setTool('select'); this.setActive('select'); return; }
+      const btn = ev.target.closest('.prefab');
+      if (btn) { this.app.tools.setTool('place', btn.dataset.type); this.setActive(btn.dataset.type); }
+    });
+  }
+  setActive(key) {
+    for (const b of this.el.querySelectorAll('.tool-btn, .prefab')) b.classList.remove('active');
+    const target = key === 'select' ? this.el.querySelector('.sel-tool') : this.el.querySelector(`.prefab[data-type="${key}"]`);
+    if (target) target.classList.add('active');
+  }
+}
+
+class Properties {
+  constructor(el, app) { this.el = el; this.app = app; this.sig = null; }
+
+  refresh() {
+    const sel = [...this.app.store.selection].sort();
+    const sig = sel.join(',');
+    // Avoid clobbering focus while the user is typing in a field.
+    if (sig === this.sig && this.el.contains(document.activeElement)) { this.updateComputed(); return; }
+    this.sig = sig;
+    this.render();
+  }
+
+  render() {
+    const sel = this.app.store.selected();
+    if (sel.length === 0) {
+      this.el.innerHTML = `<div class="prop-empty">No selection.<br><span>Pick a prefab on the left to place it, then select it here to edit its dimensions.</span></div>`;
+      return;
+    }
+    if (sel.length > 1) {
+      this.el.innerHTML = `<div class="prop-head">${sel.length} objects selected</div>
+        <div class="prop-empty"><span>Move them together, or delete. Select a single object to edit its parameters.</span></div>`;
+      return;
+    }
+    const e = sel[0]; const d = DEFS[e.type];
+    const rows = [`<div class="prop-head">${d.name}</div>`];
+    const computed = d.compute ? d.compute(e) : {};
+    for (const p of d.params) {
+      const val = p.type === 'readonly' ? (computed[p.key] ?? '') : e[p.key];
+      rows.push(`<label class="prop-row"><span>${p.label}</span>${this.field(p, val)}</label>`);
+    }
+    // position (always editable)
+    if ('x' in e) rows.push(`<label class="prop-row"><span>X</span><input type="number" step="0.1" data-k="x" value="${e.x}"></label>`);
+    if ('y' in e) rows.push(`<label class="prop-row"><span>Y</span><input type="number" step="0.1" data-k="y" value="${e.y}"></label>`);
+    this.el.innerHTML = rows.join('');
+    this.bind(e, d);
+  }
+
+  field(p, val) {
+    if (p.type === 'readonly') return `<output data-c="${p.key}">${val}</output>`;
+    if (p.type === 'text') return `<input type="text" data-k="${p.key}" value="${val ?? ''}">`;
+    if (p.type === 'color') return `<input type="color" data-k="${p.key}" value="${val || '#000000'}">`;
+    if (p.type === 'bool') return `<input type="checkbox" data-k="${p.key}" ${val ? 'checked' : ''}>`;
+    if (p.type === 'select') {
+      const opts = p.options.map((o) => `<option value="${o.v}" ${String(o.v) === String(val) ? 'selected' : ''}>${o.t}</option>`).join('');
+      return `<select data-k="${p.key}">${opts}</select>`;
+    }
+    const attrs = [`type="number"`, `data-k="${p.key}"`, `value="${val}"`];
+    if (p.step != null) attrs.push(`step="${p.step}"`);
+    if (p.min != null) attrs.push(`min="${p.min}"`);
+    if (p.max != null) attrs.push(`max="${p.max}"`);
+    return `<input ${attrs.join(' ')}>`;
+  }
+
+  bind(e, d) {
+    for (const input of this.el.querySelectorAll('[data-k]')) {
+      const k = input.dataset.k;
+      const param = d.params.find((p) => p.key === k);
+      const apply = (commit) => {
+        let v;
+        if (input.type === 'checkbox') v = input.checked;
+        else if (input.type === 'number') v = parseFloat(input.value);
+        else v = input.value;
+        if (input.type === 'number' && !isFinite(v)) return;
+        // numeric-valued selects (side/dir) -> keep numbers numeric
+        if (param && param.type === 'select' && /^-?\d+(\.\d+)?$/.test(input.value)) v = parseFloat(input.value);
+        e[k] = v;
+        this.updateComputed();
+        this.app.render();
+        if (commit) this.app.store.commit();
+      };
+      const ev = (input.type === 'checkbox' || input.tagName === 'SELECT' || input.type === 'color') ? 'change' : 'input';
+      input.addEventListener(ev, () => apply(input.tagName === 'SELECT' || input.type === 'checkbox' || input.type === 'color'));
+      input.addEventListener('change', () => this.app.store.commit());
+    }
+  }
+
+  updateComputed() {
+    const sel = this.app.store.selected();
+    if (sel.length !== 1) return;
+    const e = sel[0]; const d = DEFS[e.type];
+    if (!d.compute) return;
+    const c = d.compute(e);
+    for (const out of this.el.querySelectorAll('output[data-c]')) {
+      if (c[out.dataset.c] != null) out.textContent = c[out.dataset.c];
+    }
+  }
+}
+
+
+// ===== main.js =====
+// App bootstrap: builds the scene, wires pointer/keyboard/menu events, runs the
+// render loop, and handles file Save/Open (Electron IPC, with a browser fallback).
+
+const app = {
+  store: new Store(),
+  cam: new Camera(),
+  svg: document.getElementById('canvas'),
+  showGrid: true,
+  overlay: { snap: null, marquee: null, cursor: 'default', ghost: null, mateTarget: null },
+  render() { render(); },
+};
+app.tools = new Tools(app);
+
+const palette = new Palette(document.getElementById('palette'), app);
+const props = new Properties(document.getElementById('properties'), app);
+
+// ---- rendering --------------------------------------------------------------
+function viewSize() {
+  const r = app.svg.getBoundingClientRect();
+  return { w: Math.max(1, r.width), h: Math.max(1, r.height) };
+}
+
+function render() {
+  const { w, h } = viewSize();
+  app.svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  app.svg.style.cursor = app.tools.tool === 'place' ? 'crosshair' : 'default';
+  const out = [renderGrid(app.cam, w, h, app.showGrid)];
+
+  // entities
+  for (const e of app.store.byZ()) {
+    const pen = new Pen(app.cam);
+    try { DEFS[e.type].draw(e, pen, { selected: app.store.selection.has(e.id), scale: app.cam.scale }); } catch (_) {}
+    out.push(`<g class="ent">${pen.out()}</g>`);
+  }
+
+  // mate highlight: the link a hovered support/slider would snap onto
+  if (app.overlay.mateTarget) {
+    const o = app.overlay.mateTarget;
+    const a = app.cam.toScreen({ x: o.x1, y: o.y1 }), c = app.cam.toScreen({ x: o.x2, y: o.y2 });
+    out.push(`<line x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${c.x.toFixed(1)}" y2="${c.y.toFixed(1)}" stroke="${SEL}" stroke-width="${(o.w || 5) + 5}" stroke-linecap="round" opacity="0.28"/>`);
+  }
+
+  // ghost preview of the prefab about to be placed
+  if (app.overlay.ghost) {
+    const pen = new Pen(app.cam);
+    try { DEFS[app.overlay.ghost.type].draw(app.overlay.ghost, pen, { selected: false, scale: app.cam.scale }); } catch (_) {}
+    out.push(`<g opacity="0.5" style="pointer-events:none">${pen.out()}</g>`);
+  }
+
+  // selection: bounds box + handles
+  for (const e of app.store.selected()) {
+    const b = DEFS[e.type].bounds(e);
+    const a = app.cam.toScreen({ x: b.minX, y: b.maxY });
+    const c = app.cam.toScreen({ x: b.maxX, y: b.minY });
+    out.push(`<rect x="${Math.min(a.x, c.x).toFixed(1)}" y="${Math.min(a.y, c.y).toFixed(1)}" width="${Math.abs(c.x - a.x).toFixed(1)}" height="${Math.abs(c.y - a.y).toFixed(1)}" fill="none" stroke="${SEL}" stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/>`);
+    for (const hnd of DEFS[e.type].handles(e)) {
+      const s = app.cam.toScreen(hnd);
+      out.push(`<rect x="${(s.x - 4).toFixed(1)}" y="${(s.y - 4).toFixed(1)}" width="8" height="8" fill="#fff" stroke="${HANDLE}" stroke-width="1.5"/>`);
+    }
+  }
+
+  // marquee
+  if (app.overlay.marquee) {
+    const a = app.cam.toScreen(app.overlay.marquee.a), c = app.cam.toScreen(app.overlay.marquee.b);
+    out.push(`<rect x="${Math.min(a.x, c.x)}" y="${Math.min(a.y, c.y)}" width="${Math.abs(c.x - a.x)}" height="${Math.abs(c.y - a.y)}" fill="${SEL}22" stroke="${SEL}" stroke-width="1" stroke-dasharray="3 2"/>`);
+  }
+
+  // snap marker
+  if (app.overlay.snap) {
+    const s = app.cam.toScreen(app.overlay.snap);
+    out.push(`<g stroke="#ff8c00" stroke-width="1.4" fill="none"><line x1="${s.x - 6}" y1="${s.y}" x2="${s.x + 6}" y2="${s.y}"/><line x1="${s.x}" y1="${s.y - 6}" x2="${s.x}" y2="${s.y + 6}"/><rect x="${s.x - 4}" y="${s.y - 4}" width="8" height="8"/></g>`);
+  }
+
+  app.svg.innerHTML = out.join('');
+  updateStatus();
+}
+
+function updateStatus() {
+  document.getElementById('st-zoom').textContent = `Zoom ${Math.round(app.cam.scale)}px/u`;
+  document.getElementById('st-snap').textContent = `Snap ${app.tools.snapEnabled ? 'On' : 'Off'}`;
+  document.getElementById('st-grid').textContent = `Grid ${app.showGrid ? 'On' : 'Off'}`;
+  document.getElementById('st-count').textContent = `${app.store.entities.length} objects`;
+}
+
+// Re-render + refresh properties when the document changes.
+app.store.subscribe(() => { props.refresh(); render(); updateTitle(); });
+
+function updateTitle() {
+  const name = app.store.filePath ? app.store.filePath.split(/[\\/]/).pop() : 'Untitled';
+  document.title = `Helmet CAD — ${name}${app.store.dirty ? ' *' : ''}`;
+  const el = document.getElementById('st-file'); if (el) el.textContent = name + (app.store.dirty ? ' *' : '');
+}
+
+// ---- pointer wiring ---------------------------------------------------------
+let spaceDown = false;
+app.svg.addEventListener('pointerdown', (e) => { e.spaceKey = spaceDown; app.tools.onPointerDown(e); });
+app.svg.addEventListener('pointermove', (e) => {
+  app.tools.onPointerMove(e);
+  const r = app.svg.getBoundingClientRect();
+  const wpt = app.cam.toWorld({ x: e.clientX - r.left, y: e.clientY - r.top });
+  document.getElementById('st-pos').textContent = `x ${wpt.x.toFixed(2)}  y ${wpt.y.toFixed(2)}`;
+});
+window.addEventListener('pointerup', (e) => app.tools.onPointerUp(e));
+app.svg.addEventListener('wheel', (e) => app.tools.onWheel(e), { passive: false });
+app.svg.addEventListener('contextmenu', (e) => e.preventDefault());
+app.svg.addEventListener('pointerleave', () => {
+  if (app.tools.drag) return; // keep state mid-gesture
+  app.overlay.snap = null; app.overlay.ghost = null; app.overlay.mateTarget = null;
+  app.tools.ghost = null; render();
+});
+window.addEventListener('resize', render);
+
+// ---- actions ----------------------------------------------------------------
+function del() { if (app.store.selection.size) app.store.remove([...app.store.selection]); }
+function duplicate() {
+  const copies = app.store.selected().map((e) => ({ ...JSON.parse(JSON.stringify(e)), id: uid() }));
+  if (!copies.length) return;
+  for (const c of copies) { if ('x' in c) { c.x += 0.5; c.y -= 0.5; } if ('x1' in c) { c.x1 += 0.5; c.y1 -= 0.5; c.x2 += 0.5; c.y2 -= 0.5; } if ('vx' in c) { c.vx += 0.5; c.vy -= 0.5; } if ('cx' in c) { c.cx += 0.5; c.cy -= 0.5; } app.store.entities.push(c); }
+  app.store.selection = new Set(copies.map((c) => c.id));
+  app.store.commit();
+}
+function zoomFit() {
+  if (!app.store.entities.length) return;
+  let b = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+  for (const e of app.store.entities) { const eb = DEFS[e.type].bounds(e); b.minX = Math.min(b.minX, eb.minX); b.minY = Math.min(b.minY, eb.minY); b.maxX = Math.max(b.maxX, eb.maxX); b.maxY = Math.max(b.maxY, eb.maxY); }
+  const { w, h } = viewSize(); app.cam.fit(b, w, h); render();
+}
+
+// ---- file I/O ---------------------------------------------------------------
+async function saveDoc(saveAs) {
+  const data = app.store.serialize();
+  if (window.electronAPI) {
+    const res = saveAs ? await window.electronAPI.saveAs(data) : await window.electronAPI.save(data, app.store.filePath);
+    if (!res.canceled) { app.store.filePath = res.filePath; app.store.dirty = false; updateTitle(); }
+  } else {
+    const blob = new Blob([data], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = (app.store.filePath || 'drawing') + '.hcad.json'; a.click();
+    URL.revokeObjectURL(a.href); app.store.dirty = false; updateTitle();
+  }
+}
+async function openDoc() {
+  if (window.electronAPI) {
+    const res = await window.electronAPI.open();
+    if (!res.canceled) { app.store.loadData(res.data); app.store.filePath = res.filePath; zoomFit(); updateTitle(); }
+  } else {
+    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,.hcad.json';
+    inp.onchange = () => { const f = inp.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { try { app.store.loadData(rd.result); app.store.filePath = f.name.replace(/\.(hcad\.)?json$/, ''); zoomFit(); } catch (err) { alert('Could not open file: ' + err.message); } }; rd.readAsText(f); };
+    inp.click();
+  }
+}
+
+// ---- command dispatch (menu + toolbar + keyboard) ---------------------------
+function dispatch(cmd) {
+  switch (cmd) {
+    case 'new': app.store.newDocument(); break;
+    case 'open': openDoc(); break;
+    case 'save': saveDoc(false); break;
+    case 'saveAs': saveDoc(true); break;
+    case 'blueprint': openBlueprint(app); break;
+    case 'undo': app.store.undo(); break;
+    case 'redo': app.store.redo(); break;
+    case 'delete': del(); break;
+    case 'duplicate': duplicate(); break;
+    case 'selectAll': app.store.selectAll(); break;
+    case 'zoomIn': app.cam.zoomAt({ x: viewSize().w / 2, y: viewSize().h / 2 }, 1.2); render(); break;
+    case 'zoomOut': app.cam.zoomAt({ x: viewSize().w / 2, y: viewSize().h / 2 }, 1 / 1.2); render(); break;
+    case 'zoomFit': zoomFit(); break;
+    case 'toggleGrid': app.showGrid = !app.showGrid; render(); break;
+    case 'toggleSnap': app.tools.snapEnabled = !app.tools.snapEnabled; render(); break;
+    case 'selectTool': app.tools.setTool('select'); palette.setActive('select'); break;
+  }
+}
+if (window.electronAPI) window.electronAPI.onMenu(({ cmd }) => dispatch(cmd));
+
+// toolbar buttons
+for (const btn of document.querySelectorAll('[data-cmd]')) btn.addEventListener('click', () => dispatch(btn.dataset.cmd));
+
+// ---- keyboard ---------------------------------------------------------------
+window.addEventListener('keydown', (e) => {
+  if (e.key === ' ') spaceDown = true;
+  const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName);
+  const mod = e.ctrlKey || e.metaKey;
+  if (typing && !(mod && ['z', 'y', 's', 'o'].includes(e.key.toLowerCase()))) return;
+  if (e.key === 'Escape') { app.tools.onEscape(); palette.setActive('select'); }
+  else if ((e.key === 'Delete' || e.key === 'Backspace') && !typing) { e.preventDefault(); del(); }
+  else if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? app.store.redo() : app.store.undo(); }
+  else if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); app.store.redo(); }
+  else if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); saveDoc(e.shiftKey); }
+  else if (mod && e.key.toLowerCase() === 'o') { e.preventDefault(); openDoc(); }
+  else if (mod && e.key.toLowerCase() === 'n') { e.preventDefault(); app.store.newDocument(); }
+  else if (mod && e.key.toLowerCase() === 'a' && !typing) { e.preventDefault(); app.store.selectAll(); }
+  else if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicate(); }
+  else if (mod && e.key.toLowerCase() === 'b') { e.preventDefault(); openBlueprint(app); }
+  else if (mod && (e.key === '0')) { e.preventDefault(); zoomFit(); }
+  else if (mod && (e.key === '=' || e.key === '+')) { e.preventDefault(); dispatch('zoomIn'); }
+  else if (mod && e.key === '-') { e.preventDefault(); dispatch('zoomOut'); }
+  else if (!typing && e.key.toLowerCase() === 'g') { dispatch('toggleGrid'); }
+});
+window.addEventListener('keyup', (e) => { if (e.key === ' ') spaceDown = false; });
+
+// ---- go ---------------------------------------------------------------------
+updateTitle();
+render();
+
+})();
+</script>
+</body>
+</html>

@@ -13,15 +13,24 @@ and annotate with Smart Dimensions.
 
 ## Run it
 
+**Easiest — just open the file.** Download **[`helmet-cad.html`](helmet-cad.html)**
+and double-click it. It's a single self-contained file (no install, no server,
+works offline) — the whole app bundled into one HTML.
+
 **Desktop (Electron):**
 ```bash
 npm install        # installs electron
 npm start
 ```
 
-**In a browser (no install needed):**
+**Browser via local server:**
 ```bash
 npm run web        # serves at http://localhost:5173
+```
+
+**Rebuild the standalone file** after editing `app/`:
+```bash
+npm run build      # regenerates helmet-cad.html
 ```
 
 ## How it works
