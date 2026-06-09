@@ -81,11 +81,19 @@ Click **Blueprint** (or `Ctrl+B`) to publish the draft onto a formatted sheet:
 - **Border + zone marks + title block** — numbered/lettered zones and a title
   block you fill from the side panel: *Title, Drawn by, Organisation, Date, Dwg
   no., Scale, Revision, Sheet* (Size is taken from the format).
-- **Arrange / separate parts** — drag any part to pull it out and show it off
-  (e.g. separating a linkage into its bodies for calculations), or drag empty
-  paper to move the whole drawing. This is **non-destructive**: it only stores
-  per-part offsets, so your working draft is never modified. *Fit drawing* and
-  *Reset layout* are one click away.
+- **Select** — click a part to select it, **box-select** several by dragging on
+  empty paper (Shift adds), or *Select all*. *Esc* deselects.
+- **Move / separate parts** — drag a selected part (or group) to pull it out and
+  show it off (e.g. separating a linkage into its bodies for calculations).
+- **Scale** — three ways:
+  - **Global** scales the whole drawing (number box, ± buttons, or *Shift+wheel*)
+    so you can shrink it and free up room to arrange details.
+  - **Single item** — select one and drag a corner of its box (or *Scale ±* / the
+    `+`/`-` keys).
+  - **Several at once** — box-select a subset and scale them together about their
+    common centre.
+  All of this is **non-destructive**: only per-part offset + scale are stored, so
+  your working draft is never modified. *Fit drawing* and *Reset layout* revert.
 - **Export** — *Print / PDF* (opens a true-to-size print page), or download
   **SVG** / **PNG**. The sheet is emitted in real millimetres so it prints to
   scale.

@@ -194,7 +194,7 @@ window.addEventListener('keydown', (e) => {
   const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName);
   const mod = e.ctrlKey || e.metaKey;
   if (typing && !(mod && ['z', 'y', 's', 'o'].includes(e.key.toLowerCase()))) return;
-  if (app.mode === 'blueprint') { if (e.key === 'Escape') app.blueprint.exit(); return; }
+  if (app.mode === 'blueprint') { app.blueprint.onKey(e); return; }
   if (e.key === 'Escape') { app.tools.onEscape(); palette.setActive('select'); }
   else if ((e.key === 'Delete' || e.key === 'Backspace') && !typing) { e.preventDefault(); del(); }
   else if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? app.store.redo() : app.store.undo(); }
