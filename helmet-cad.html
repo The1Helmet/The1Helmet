@@ -522,11 +522,10 @@ const DEFS = {
 
   pinSupport: def({
     name: 'Pin support (hinge)', category: 'Supports', pts: [['x', 'y']],
-    defaults: (at) => ({ x: at.x, y: at.y, angle: 270, size: 0.7, hatch: true }),
+    defaults: (at) => ({ x: at.x, y: at.y, angle: 270, size: 0.7 }),
     params: [
       { key: 'angle', label: 'Direction°', type: 'number', step: 5 },
       { key: 'size', label: 'Size', type: 'number', min: 0.1, step: 0.1 },
-      { key: 'hatch', label: 'Ground hatch', type: 'bool' },
     ],
     bounds: (e) => boundsOf([P(e, 'x', 'y')], e.size * 1.4),
     draw: (e, pen) => drawTriSupport(e, pen, false),
@@ -534,11 +533,10 @@ const DEFS = {
 
   rollerSupport: def({
     name: 'Roller support', category: 'Supports', pts: [['x', 'y']],
-    defaults: (at) => ({ x: at.x, y: at.y, angle: 270, size: 0.7, hatch: true }),
+    defaults: (at) => ({ x: at.x, y: at.y, angle: 270, size: 0.7 }),
     params: [
       { key: 'angle', label: 'Direction°', type: 'number', step: 5 },
       { key: 'size', label: 'Size', type: 'number', min: 0.1, step: 0.1 },
-      { key: 'hatch', label: 'Ground hatch', type: 'bool' },
     ],
     bounds: (e) => boundsOf([P(e, 'x', 'y')], e.size * 1.7),
     draw: (e, pen) => drawTriSupport(e, pen, true),
@@ -590,9 +588,9 @@ const DEFS = {
       const A = V.add(pin, V.scale(u, -e.rodLen));          // front face of head
       const headBack = V.add(A, V.scale(u, -e.headT));
       const cylBack = V.add(A, V.scale(u, -e.cylLen));
-      // cylinder U (open toward pin)
+      // cylinder: back wall + bottom rail only (top of chamber omitted, open toward pin)
       pen.poly([
-        V.add(A, V.scale(n, outer)), V.add(cylBack, V.scale(n, outer)),
+        V.add(cylBack, V.scale(n, outer)),
         V.add(cylBack, V.scale(n, -outer)), V.add(A, V.scale(n, -outer)),
       ], { w: 1.8 });
       // piston head
@@ -896,6 +894,7 @@ const DEFS = {
 };
 
 // Shared drawing for pin/roller triangular supports.
+// No ground line/hatch — pair with a Fixed wall prefab when you want ground.
 function drawTriSupport(e, pen, roller) {
   const apex = P(e, 'x', 'y');
   const down = V.fromAngle(rad(e.angle));
@@ -905,17 +904,12 @@ function drawTriSupport(e, pen, roller) {
   const p1 = V.add(baseC, V.scale(bdir, bh)), p2 = V.add(baseC, V.scale(bdir, -bh));
   pen.poly([apex, p1, p2], { close: true, w: 1.7, fill: '#fff' });
   pen.circlePx(apex, 5, { stroke: INK, w: 1.6, fill: '#fff' });
-  let groundC = baseC;
   if (roller) {
     const rr = e.size * 0.16;
     const off = V.scale(down, rr);
     pen.circlePx(V.add(V.add(baseC, V.scale(bdir, bh * 0.5)), off), rr * pen.scale, { stroke: INK, w: 1.4, fill: '#fff' });
     pen.circlePx(V.add(V.add(baseC, V.scale(bdir, -bh * 0.5)), off), rr * pen.scale, { stroke: INK, w: 1.4, fill: '#fff' });
-    groundC = V.add(baseC, V.scale(down, rr * 2));
   }
-  const ga = V.add(groundC, V.scale(bdir, bh * 1.25)), gb = V.add(groundC, V.scale(bdir, -bh * 1.25));
-  if (e.hatch) pen.hatch(gb, ga, { side: 1, w: 1.4 });
-  else pen.line(gb, ga, { w: 1.4 });
 }
 
 // Factory: create a fresh entity of `type` placed at world point `at`.
