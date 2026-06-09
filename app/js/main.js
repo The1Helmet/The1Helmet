@@ -7,17 +7,19 @@ import { Palette, Properties } from './panels.js';
 import { DEFS } from './entities.js';
 import { uid } from './geometry.js';
 import { Pen, renderGrid, SEL, HANDLE } from './renderer.js';
-import { openBlueprint } from './blueprint.js';
+import { Blueprint } from './blueprint.js';
 
 const app = {
   store: new Store(),
   cam: new Camera(),
   svg: document.getElementById('canvas'),
   showGrid: true,
+  mode: 'draft',
   overlay: { snap: null, marquee: null, cursor: 'default', ghost: null, mateTarget: null },
   render() { render(); },
 };
 app.tools = new Tools(app);
+app.blueprint = new Blueprint(app);
 
 const palette = new Palette(document.getElementById('palette'), app);
 const props = new Properties(document.getElementById('properties'), app);
@@ -29,6 +31,7 @@ function viewSize() {
 }
 
 function render() {
+  if (app.mode === 'blueprint') { app.blueprint.render(); return; }
   const { w, h } = viewSize();
   app.svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
   app.svg.style.cursor = app.tools.tool === 'place' ? 'crosshair' : 'default';
@@ -101,15 +104,16 @@ function updateTitle() {
 
 // ---- pointer wiring ---------------------------------------------------------
 let spaceDown = false;
-app.svg.addEventListener('pointerdown', (e) => { e.spaceKey = spaceDown; app.tools.onPointerDown(e); });
+app.svg.addEventListener('pointerdown', (e) => { e.spaceKey = spaceDown; (app.mode === 'blueprint' ? app.blueprint : app.tools).onPointerDown(e); });
 app.svg.addEventListener('pointermove', (e) => {
+  if (app.mode === 'blueprint') { app.blueprint.onPointerMove(e); return; }
   app.tools.onPointerMove(e);
   const r = app.svg.getBoundingClientRect();
   const wpt = app.cam.toWorld({ x: e.clientX - r.left, y: e.clientY - r.top });
   document.getElementById('st-pos').textContent = `x ${wpt.x.toFixed(2)}  y ${wpt.y.toFixed(2)}`;
 });
-window.addEventListener('pointerup', (e) => app.tools.onPointerUp(e));
-app.svg.addEventListener('wheel', (e) => app.tools.onWheel(e), { passive: false });
+window.addEventListener('pointerup', (e) => (app.mode === 'blueprint' ? app.blueprint : app.tools).onPointerUp(e));
+app.svg.addEventListener('wheel', (e) => (app.mode === 'blueprint' ? app.blueprint : app.tools).onWheel(e), { passive: false });
 app.svg.addEventListener('contextmenu', (e) => e.preventDefault());
 app.svg.addEventListener('pointerleave', () => {
   if (app.tools.drag) return; // keep state mid-gesture
@@ -165,7 +169,7 @@ function dispatch(cmd) {
     case 'open': openDoc(); break;
     case 'save': saveDoc(false); break;
     case 'saveAs': saveDoc(true); break;
-    case 'blueprint': openBlueprint(app); break;
+    case 'blueprint': app.mode === 'blueprint' ? app.blueprint.exit() : app.blueprint.enter(); break;
     case 'undo': app.store.undo(); break;
     case 'redo': app.store.redo(); break;
     case 'delete': del(); break;
@@ -190,6 +194,7 @@ window.addEventListener('keydown', (e) => {
   const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName);
   const mod = e.ctrlKey || e.metaKey;
   if (typing && !(mod && ['z', 'y', 's', 'o'].includes(e.key.toLowerCase()))) return;
+  if (app.mode === 'blueprint') { if (e.key === 'Escape') app.blueprint.exit(); return; }
   if (e.key === 'Escape') { app.tools.onEscape(); palette.setActive('select'); }
   else if ((e.key === 'Delete' || e.key === 'Backspace') && !typing) { e.preventDefault(); del(); }
   else if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? app.store.redo() : app.store.undo(); }
@@ -199,7 +204,7 @@ window.addEventListener('keydown', (e) => {
   else if (mod && e.key.toLowerCase() === 'n') { e.preventDefault(); app.store.newDocument(); }
   else if (mod && e.key.toLowerCase() === 'a' && !typing) { e.preventDefault(); app.store.selectAll(); }
   else if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicate(); }
-  else if (mod && e.key.toLowerCase() === 'b') { e.preventDefault(); openBlueprint(app); }
+  else if (mod && e.key.toLowerCase() === 'b') { e.preventDefault(); dispatch('blueprint'); }
   else if (mod && (e.key === '0')) { e.preventDefault(); zoomFit(); }
   else if (mod && (e.key === '=' || e.key === '+')) { e.preventDefault(); dispatch('zoomIn'); }
   else if (mod && e.key === '-') { e.preventDefault(); dispatch('zoomOut'); }

@@ -72,6 +72,25 @@ The four dimension prefabs measure live geometry and show editable values:
 - **Radius / diameter** — leader + `R` or `⌀` value.
 - **Coordinate** — a point's `(x, y)`.
 
+### Blueprint mode
+
+Click **Blueprint** (or `Ctrl+B`) to publish the draft onto a formatted sheet:
+
+- **Pick a sheet** — A0–A4 (ISO) or Letter (ANSI A), landscape/portrait, with a
+  live size preview (the *Sheet Format / Size* dialog).
+- **Border + zone marks + title block** — numbered/lettered zones and a title
+  block you fill from the side panel: *Title, Drawn by, Organisation, Date, Dwg
+  no., Scale, Revision, Sheet* (Size is taken from the format).
+- **Arrange / separate parts** — drag any part to pull it out and show it off
+  (e.g. separating a linkage into its bodies for calculations), or drag empty
+  paper to move the whole drawing. This is **non-destructive**: it only stores
+  per-part offsets, so your working draft is never modified. *Fit drawing* and
+  *Reset layout* are one click away.
+- **Export** — *Print / PDF* (opens a true-to-size print page), or download
+  **SVG** / **PNG**. The sheet is emitted in real millimetres so it prints to
+  scale.
+- The sheet + title block + layout are saved inside the `.hcad.json` project.
+
 ### Files
 
 - **Save / Open** native `*.hcad.json` project files (Ctrl+S / Ctrl+O). In the

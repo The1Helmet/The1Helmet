@@ -83,6 +83,26 @@ body {
 }
 #statusbar .sep { height: 14px; }
 
+/* ---- blueprint panel ---- */
+#toolbar.bp-on .accent { background: var(--accent-2); outline: 2px solid #fff3; }
+#blueprint-panel .bp-row2 { display: flex; gap: 6px; margin-bottom: 8px; }
+#blueprint-panel .bp-row2 button { flex: 1; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 5px; padding: 6px; cursor: pointer; font-size: 12px; }
+#blueprint-panel .bp-row2 button:hover { background: #454d59; }
+#blueprint-panel #bp-print { background: var(--accent); border-color: var(--accent-2); }
+#blueprint-panel .bp-exit { width: 100%; margin-top: 12px; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; cursor: pointer; }
+#blueprint-panel .bp-exit:hover { background: #454d59; }
+
+/* ---- format dialog ---- */
+.modal.fmt { max-width: 560px; }
+.fmt-body { display: flex; gap: 16px; }
+.fmt-list { flex: 1; border: 1px solid var(--line); border-radius: 6px; max-height: 230px; overflow-y: auto; background: var(--panel-2); }
+.fmt-item { padding: 7px 10px; cursor: pointer; border-bottom: 1px solid var(--line); }
+.fmt-item:hover { background: #454d59; }
+.fmt-item.sel { background: var(--accent); color: #fff; }
+.fmt-side { width: 180px; text-align: center; }
+.fmt-preview { background: #e9edf2; border: 1px solid var(--line); border-radius: 6px; padding: 6px; margin-bottom: 10px; }
+#fmt-dims { color: var(--muted); font-size: 12px; line-height: 1.7; text-align: left; }
+
 /* ---- modal ---- */
 .modal-backdrop { position: fixed; inset: 0; background: #0008; display: flex; align-items: center; justify-content: center; z-index: 50; }
 .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 22px; max-width: 460px; box-shadow: 0 18px 60px #000a; }

@@ -6,6 +6,7 @@ export class Store {
   constructor() {
     this.entities = [];
     this.selection = new Set();
+    this.sheet = null;           // Blueprint sheet config (lazily created)
     this.filePath = null;
     this.dirty = false;
     this._undo = [];
@@ -78,13 +79,14 @@ export class Store {
 
   // ---- file ----
   serialize() {
-    return JSON.stringify({ app: 'helmet-cad', version: 1, entities: this.entities }, null, 2);
+    return JSON.stringify({ app: 'helmet-cad', version: 1, entities: this.entities, sheet: this.sheet }, null, 2);
   }
   loadData(json) {
     const data = typeof json === 'string' ? JSON.parse(json) : json;
     if (!data || !Array.isArray(data.entities)) throw new Error('Not a Helmet CAD file');
     // keep only entities whose type we understand
     this.entities = data.entities.filter((e) => DEFS[e.type]);
+    this.sheet = data.sheet || null;
     this.selection.clear();
     this._undo.length = 0; this._redo.length = 0;
     this._snapshot = this._cap();
@@ -92,7 +94,7 @@ export class Store {
     this.emit();
   }
   newDocument() {
-    this.entities = []; this.selection.clear(); this.filePath = null;
+    this.entities = []; this.selection.clear(); this.sheet = null; this.filePath = null;
     this._undo.length = 0; this._redo.length = 0; this._snapshot = this._cap();
     this.dirty = false; this.emit();
   }
