@@ -151,11 +151,9 @@ export const DEFS = {
       const A = V.add(pin, V.scale(u, -e.rodLen));          // front face of head
       const headBack = V.add(A, V.scale(u, -e.headT));
       const cylBack = V.add(A, V.scale(u, -e.cylLen));
-      // cylinder: back wall + bottom rail only (top of chamber omitted, open toward pin)
-      pen.poly([
-        V.add(cylBack, V.scale(n, outer)),
-        V.add(cylBack, V.scale(n, -outer)), V.add(A, V.scale(n, -outer)),
-      ], { w: 1.8 });
+      // cylinder: top + bottom rails only (closed back/cap omitted), open at both ends
+      pen.line(V.add(A, V.scale(n, outer)), V.add(cylBack, V.scale(n, outer)), { w: 1.8 });
+      pen.line(V.add(A, V.scale(n, -outer)), V.add(cylBack, V.scale(n, -outer)), { w: 1.8 });
       // piston head
       pen.poly([
         V.add(A, V.scale(n, half)), V.add(headBack, V.scale(n, half)),
