@@ -443,6 +443,20 @@ export const DEFS = {
   }),
 
   // ======================= ANNOTATION =======================
+  guideline: def({
+    name: 'Guideline', category: 'Annotation', pts: [['x1', 'y1'], ['x2', 'y2']],
+    defaults: (at) => ({ x1: at.x, y1: at.y, x2: at.x + 2.5, y2: at.y, style: 'dashed', color: '#7a7f87' }),
+    params: [
+      { key: 'style', label: 'Style', type: 'select', options: [{ v: 'dashed', t: 'Dashed' }, { v: 'dotted', t: 'Dotted' }, { v: 'dashdot', t: 'Dash-dot' }] },
+      { key: 'color', label: 'Color', type: 'color' },
+    ],
+    anchors: (e) => [P(e, 'x1', 'y1'), P(e, 'x2', 'y2'), V.mid(P(e, 'x1', 'y1'), P(e, 'x2', 'y2'))],
+    draw: (e, pen) => {
+      const dash = e.style === 'dotted' ? '1 6' : e.style === 'dashdot' ? '13 6 2 6' : '10 7';
+      pen.line(P(e, 'x1', 'y1'), P(e, 'x2', 'y2'), { stroke: e.color, w: 1.2, dash, cap: e.style === 'dotted' ? 'round' : 'butt' });
+    },
+  }),
+
   label: def({
     name: 'Text label', category: 'Annotation', snap: false, pts: [['x', 'y']],
     defaults: (at) => ({ x: at.x, y: at.y, text: 'Text', size: 16, angle: 0, italic: false }),

@@ -11,7 +11,7 @@ const PLACE_STEPS = {
   force: ['p0', 'tail'], distributed: ['p0', 'p1'], moment: ['p0'],
   vector: ['p0', 'tip'], omega: ['p0'], axes: ['p0'],
   dimLinear: ['p0', 'p1'], dimAngular: ['p0', 'p1', 'p2'],
-  dimRadius: ['p0'], dimCoord: ['p0'], label: ['p0'],
+  dimRadius: ['p0'], dimCoord: ['p0'], label: ['p0'], guideline: ['p0', 'p1'],
 };
 
 export class Tools {
