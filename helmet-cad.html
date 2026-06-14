@@ -2093,8 +2093,20 @@ function del() { if (app.store.selection.size) app.store.remove([...app.store.se
 function duplicate() {
   const copies = app.store.selected().map((e) => ({ ...JSON.parse(JSON.stringify(e)), id: uid() }));
   if (!copies.length) return;
-  for (const c of copies) { if ('x' in c) { c.x += 0.5; c.y -= 0.5; } if ('x1' in c) { c.x1 += 0.5; c.y1 -= 0.5; c.x2 += 0.5; c.y2 -= 0.5; } if ('vx' in c) { c.vx += 0.5; c.vy -= 0.5; } if ('cx' in c) { c.cx += 0.5; c.cy -= 0.5; } app.store.entities.push(c); }
+  for (const c of copies) { DEFS[c.type].translate(c, { x: 0.5, y: -0.5 }); app.store.entities.push(c); }
   app.store.selection = new Set(copies.map((c) => c.id));
+  app.store.commit();
+}
+
+// clipboard (deep copies of entity data, ids assigned on paste)
+let clipboard = [];
+function copySel() { const s = app.store.selected(); if (s.length) clipboard = s.map((e) => JSON.parse(JSON.stringify(e))); }
+function cutSel() { copySel(); del(); }
+function paste() {
+  if (!clipboard.length) return;
+  const made = clipboard.map((c) => { const e = { ...JSON.parse(JSON.stringify(c)), id: uid() }; DEFS[e.type].translate(e, { x: 0.5, y: -0.5 }); app.store.entities.push(e); return e; });
+  app.store.selection = new Set(made.map((e) => e.id));
+  clipboard = made.map((e) => JSON.parse(JSON.stringify(e))); // cascade so repeated pastes step
   app.store.commit();
 }
 function zoomFit() {
@@ -2170,6 +2182,9 @@ window.addEventListener('keydown', (e) => {
   else if (mod && e.key.toLowerCase() === 'n') { e.preventDefault(); app.store.newDocument(); }
   else if (mod && e.key.toLowerCase() === 'a' && !typing) { e.preventDefault(); app.store.selectAll(); }
   else if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicate(); }
+  else if (mod && e.key.toLowerCase() === 'c' && !typing) { e.preventDefault(); copySel(); }
+  else if (mod && e.key.toLowerCase() === 'x' && !typing) { e.preventDefault(); cutSel(); }
+  else if (mod && e.key.toLowerCase() === 'v' && !typing) { e.preventDefault(); paste(); }
   else if (mod && e.key.toLowerCase() === 'b') { e.preventDefault(); dispatch('blueprint'); }
   else if (mod && (e.key === '0')) { e.preventDefault(); zoomFit(); }
   else if (mod && (e.key === '=' || e.key === '+')) { e.preventDefault(); dispatch('zoomIn'); }
