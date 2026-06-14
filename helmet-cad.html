@@ -92,9 +92,9 @@ body {
 
 /* ---- blueprint panel ---- */
 #toolbar.bp-on .accent { background: var(--accent-2); outline: 2px solid #fff3; }
-#blueprint-panel .bp-row2 { display: flex; gap: 6px; margin-bottom: 8px; }
-#blueprint-panel .bp-row2 button { flex: 1; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 5px; padding: 6px; cursor: pointer; font-size: 12px; }
-#blueprint-panel .bp-row2 button:hover { background: #454d59; }
+.panel-right .bp-row2 { display: flex; gap: 6px; margin-bottom: 8px; }
+.panel-right .bp-row2 button { flex: 1; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 5px; padding: 6px; cursor: pointer; font-size: 12px; }
+.panel-right .bp-row2 button:hover { background: #454d59; }
 #blueprint-panel #bp-print { background: var(--accent); border-color: var(--accent-2); }
 #blueprint-panel .bp-exit { width: 100%; margin-top: 12px; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; cursor: pointer; }
 #blueprint-panel .bp-exit:hover { background: #454d59; }
@@ -1023,7 +1023,13 @@ class Store {
     this.commit();
   }
   get(id) { return this.entities.find((e) => e.id === id); }
-  byZ() { return this.entities; } // draw order = insertion order
+  byZ() { return this.entities; } // draw order = array order (later = on top)
+
+  // ---- draw order (z) ----
+  toFront(ids) { const s = new Set(ids); this.entities = [...this.entities.filter((e) => !s.has(e.id)), ...this.entities.filter((e) => s.has(e.id))]; this.commit(); }
+  toBack(ids) { const s = new Set(ids); this.entities = [...this.entities.filter((e) => s.has(e.id)), ...this.entities.filter((e) => !s.has(e.id))]; this.commit(); }
+  raise(ids) { const s = new Set(ids); const a = this.entities; for (let i = a.length - 2; i >= 0; i--) if (s.has(a[i].id) && !s.has(a[i + 1].id)) { [a[i], a[i + 1]] = [a[i + 1], a[i]]; } this.commit(); }
+  lower(ids) { const s = new Set(ids); const a = this.entities; for (let i = 1; i < a.length; i++) if (s.has(a[i].id) && !s.has(a[i - 1].id)) { [a[i], a[i - 1]] = [a[i - 1], a[i]]; } this.commit(); }
   _pruneSelection() {
     const live = new Set(this.entities.map((e) => e.id));
     for (const id of [...this.selection]) if (!live.has(id)) this.selection.delete(id);
@@ -1842,7 +1848,8 @@ class Properties {
     }
     if (sel.length > 1) {
       this.el.innerHTML = `<div class="prop-head">${sel.length} objects selected</div>
-        <div class="prop-empty"><span>Move them together, or delete. Select a single object to edit its parameters.</span></div>`;
+        <div class="prop-empty"><span>Move them together, reorder, or delete. Select a single object to edit its parameters.</span></div>${this.arrangeHTML()}`;
+      this.wireArrange();
       return;
     }
     const e = sel[0]; const d = DEFS[e.type];
@@ -1855,8 +1862,28 @@ class Properties {
     // position (always editable)
     if ('x' in e) rows.push(`<label class="prop-row"><span>X</span><input type="number" step="0.1" data-k="x" value="${e.x}"></label>`);
     if ('y' in e) rows.push(`<label class="prop-row"><span>Y</span><input type="number" step="0.1" data-k="y" value="${e.y}"></label>`);
+    rows.push(this.arrangeHTML());
     this.el.innerHTML = rows.join('');
     this.bind(e, d);
+    this.wireArrange();
+  }
+
+  // Draw-order (z) controls — later in the list draws on top.
+  arrangeHTML() {
+    return `<div class="cat">Arrange (draw order)</div>
+      <div class="bp-row2">
+        <button data-arr="front" title="Bring to front">⤒ Front</button>
+        <button data-arr="raise" title="Forward ( ] )">▲</button>
+        <button data-arr="lower" title="Backward ( [ )">▼</button>
+        <button data-arr="back" title="Send to back">⤓ Back</button>
+      </div>`;
+  }
+  wireArrange() {
+    const ids = () => [...this.app.store.selection];
+    this.el.querySelectorAll('[data-arr]').forEach((b) => b.addEventListener('click', () => {
+      const s = this.app.store, i = ids();
+      ({ front: () => s.toFront(i), back: () => s.toBack(i), raise: () => s.raise(i), lower: () => s.lower(i) }[b.dataset.arr])();
+    }));
   }
 
   field(p, val) {
@@ -2115,6 +2142,8 @@ window.addEventListener('keydown', (e) => {
   else if (mod && (e.key === '=' || e.key === '+')) { e.preventDefault(); dispatch('zoomIn'); }
   else if (mod && e.key === '-') { e.preventDefault(); dispatch('zoomOut'); }
   else if (!typing && e.key.toLowerCase() === 'g') { dispatch('toggleGrid'); }
+  else if (!typing && e.key === ']' && app.store.selection.size) { e.shiftKey ? app.store.toFront([...app.store.selection]) : app.store.raise([...app.store.selection]); }
+  else if (!typing && e.key === '[' && app.store.selection.size) { e.shiftKey ? app.store.toBack([...app.store.selection]) : app.store.lower([...app.store.selection]); }
 });
 window.addEventListener('keyup', (e) => { if (e.key === ' ') spaceDown = false; });
 

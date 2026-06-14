@@ -64,7 +64,13 @@ export class Store {
     this.commit();
   }
   get(id) { return this.entities.find((e) => e.id === id); }
-  byZ() { return this.entities; } // draw order = insertion order
+  byZ() { return this.entities; } // draw order = array order (later = on top)
+
+  // ---- draw order (z) ----
+  toFront(ids) { const s = new Set(ids); this.entities = [...this.entities.filter((e) => !s.has(e.id)), ...this.entities.filter((e) => s.has(e.id))]; this.commit(); }
+  toBack(ids) { const s = new Set(ids); this.entities = [...this.entities.filter((e) => s.has(e.id)), ...this.entities.filter((e) => !s.has(e.id))]; this.commit(); }
+  raise(ids) { const s = new Set(ids); const a = this.entities; for (let i = a.length - 2; i >= 0; i--) if (s.has(a[i].id) && !s.has(a[i + 1].id)) { [a[i], a[i + 1]] = [a[i + 1], a[i]]; } this.commit(); }
+  lower(ids) { const s = new Set(ids); const a = this.entities; for (let i = 1; i < a.length; i++) if (s.has(a[i].id) && !s.has(a[i - 1].id)) { [a[i], a[i - 1]] = [a[i - 1], a[i]]; } this.commit(); }
   _pruneSelection() {
     const live = new Set(this.entities.map((e) => e.id));
     for (const id of [...this.selection]) if (!live.has(id)) this.selection.delete(id);

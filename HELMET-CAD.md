@@ -116,6 +116,7 @@ Click **Blueprint** (or `Ctrl+B`) to publish the draft onto a formatted sheet:
 | Zoom | wheel · `Ctrl+0` fit · `Ctrl +/-` |
 | Undo / Redo | `Ctrl+Z` / `Ctrl+Shift+Z` |
 | Delete · Duplicate · Select all | `Del` · `Ctrl+D` · `Ctrl+A` |
+| Draw order | `]` forward · `[` backward · `Shift+]` front · `Shift+[` back (also in Properties ▸ Arrange) |
 | Toggle grid · snap | `G` · `Ctrl+Shift+G` |
 | Finish / cancel placement | `Esc` |
 

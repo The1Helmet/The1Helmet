@@ -209,6 +209,8 @@ window.addEventListener('keydown', (e) => {
   else if (mod && (e.key === '=' || e.key === '+')) { e.preventDefault(); dispatch('zoomIn'); }
   else if (mod && e.key === '-') { e.preventDefault(); dispatch('zoomOut'); }
   else if (!typing && e.key.toLowerCase() === 'g') { dispatch('toggleGrid'); }
+  else if (!typing && e.key === ']' && app.store.selection.size) { e.shiftKey ? app.store.toFront([...app.store.selection]) : app.store.raise([...app.store.selection]); }
+  else if (!typing && e.key === '[' && app.store.selection.size) { e.shiftKey ? app.store.toBack([...app.store.selection]) : app.store.lower([...app.store.selection]); }
 });
 window.addEventListener('keyup', (e) => { if (e.key === ' ') spaceDown = false; });
 

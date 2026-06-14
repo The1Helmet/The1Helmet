@@ -64,7 +64,8 @@ export class Properties {
     }
     if (sel.length > 1) {
       this.el.innerHTML = `<div class="prop-head">${sel.length} objects selected</div>
-        <div class="prop-empty"><span>Move them together, or delete. Select a single object to edit its parameters.</span></div>`;
+        <div class="prop-empty"><span>Move them together, reorder, or delete. Select a single object to edit its parameters.</span></div>${this.arrangeHTML()}`;
+      this.wireArrange();
       return;
     }
     const e = sel[0]; const d = DEFS[e.type];
@@ -77,8 +78,28 @@ export class Properties {
     // position (always editable)
     if ('x' in e) rows.push(`<label class="prop-row"><span>X</span><input type="number" step="0.1" data-k="x" value="${e.x}"></label>`);
     if ('y' in e) rows.push(`<label class="prop-row"><span>Y</span><input type="number" step="0.1" data-k="y" value="${e.y}"></label>`);
+    rows.push(this.arrangeHTML());
     this.el.innerHTML = rows.join('');
     this.bind(e, d);
+    this.wireArrange();
+  }
+
+  // Draw-order (z) controls — later in the list draws on top.
+  arrangeHTML() {
+    return `<div class="cat">Arrange (draw order)</div>
+      <div class="bp-row2">
+        <button data-arr="front" title="Bring to front">⤒ Front</button>
+        <button data-arr="raise" title="Forward ( ] )">▲</button>
+        <button data-arr="lower" title="Backward ( [ )">▼</button>
+        <button data-arr="back" title="Send to back">⤓ Back</button>
+      </div>`;
+  }
+  wireArrange() {
+    const ids = () => [...this.app.store.selection];
+    this.el.querySelectorAll('[data-arr]').forEach((b) => b.addEventListener('click', () => {
+      const s = this.app.store, i = ids();
+      ({ front: () => s.toFront(i), back: () => s.toBack(i), raise: () => s.raise(i), lower: () => s.lower(i) }[b.dataset.arr])();
+    }));
   }
 
   field(p, val) {
