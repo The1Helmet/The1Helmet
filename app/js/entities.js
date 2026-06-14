@@ -113,21 +113,26 @@ export const DEFS = {
       { key: 'blockW', label: 'Block width', type: 'number', min: 0.1, step: 0.1 },
       { key: 'blockH', label: 'Block height', type: 'number', min: 0.1, step: 0.1 },
       { key: 'guideLen', label: 'Guide length', type: 'number', min: 0.2, step: 0.2 },
-      { key: 'side', label: 'Hatch side', type: 'select', options: [{ v: 1, t: 'Above' }, { v: -1, t: 'Below' }] },
+      { key: 'side', label: 'Ground side', type: 'select', options: [{ v: 1, t: 'Below block' }, { v: -1, t: 'Above block' }] },
       { key: 'hatch', label: 'Ground hatch', type: 'bool' },
     ],
     bounds: (e) => boundsOf([P(e, 'x', 'y')], Math.max(e.guideLen, e.blockW)),
     draw: (e, pen) => {
       const c = P(e, 'x', 'y');
-      const u = V.fromAngle(rad(e.angle)); const n = V.scale(V.perp(u), Number(e.side));
-      const surfOff = V.scale(n, e.blockH / 2);
-      const sCenter = V.add(c, surfOff);
-      const ga = V.add(sCenter, V.scale(u, e.guideLen / 2)), gb = V.add(sCenter, V.scale(u, -e.guideLen / 2));
-      if (e.hatch) pen.hatch(gb, ga, { side: Number(e.side), w: 1.6 });
+      const u = V.fromAngle(rad(e.angle));
+      const nrm = V.perp(u);
+      const sgn = Number(e.side);
+      const gdir = V.scale(nrm, -sgn);             // toward the ground
+      const hh = e.blockH / 2, hw = e.blockW / 2;
+      // guide surface line sits along the block's ground edge; hatch on ground side
+      const surfC = V.add(c, V.scale(gdir, hh));
+      const ga = V.add(surfC, V.scale(u, e.guideLen / 2)), gb = V.add(surfC, V.scale(u, -e.guideLen / 2));
+      if (e.hatch) pen.hatch(gb, ga, { side: -sgn, w: 1.6 });
       else pen.line(gb, ga, { w: 1.6 });
-      // slider block
-      const hw = V.scale(u, e.blockW / 2), hh = V.scale(n, e.blockH / 2);
-      pen.poly([V.add(V.add(c, hw), hh), V.add(V.sub(c, hw), hh), V.sub(V.sub(c, hw), hh), V.sub(V.add(c, hw), hh)], { close: true, w: 1.6, fill: '#fff' });
+      // slider block resting on the surface, pin centred inside it
+      const hu = V.scale(u, hw), hv = V.scale(nrm, hh);
+      const corner = (su, sv) => V.add(c, V.add(V.scale(hu, su), V.scale(hv, sv)));
+      pen.poly([corner(1, 1), corner(-1, 1), corner(-1, -1), corner(1, -1)], { close: true, w: 1.6, fill: '#fff' });
       pen.circlePx(c, 5.5, { stroke: INK, w: 1.6, fill: '#fff' });
     },
   }),
