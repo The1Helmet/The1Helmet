@@ -32,7 +32,7 @@ export function defaultSheet() {
   return {
     sizeKey: 'A4L',
     fields: { title: 'Untitled', name: '', org: '', date: today, dwgNo: '', rev: '', scale: '1:1', sheet: '1 OF 1' },
-    layout: { originX: 0, originY: 0, scale: 20, overrides: {}, scales: {} }, // mm, mm, mm/unit, {id:{x,y}}, {id:factor}
+    layout: { originX: 0, originY: 0, scale: 20, overrides: {}, scales: {}, labelScale: 1 }, // mm, mm, mm/unit, {id:{x,y}}, {id:factor}, text multiplier
   };
 }
 
@@ -84,6 +84,7 @@ export function buildSheetMarkup(view, cfg, entities, clipId = 'bpClip') {
     const f = cfg.layout.scales[e.id] || 1;
     const cam = drawCam(view, cfg.layout.scale, origin, off, f, pivotOf(e));
     const pen = new Pen(cam);
+    pen.textScale = (cam.scale / 60) * (cfg.layout.labelScale ?? 1); // labels scale with the drawing
     try { DEFS[e.type].draw(e, pen, { selected: false, scale: cam.scale }); } catch (_) {}
     out.push(pen.out());
   }
@@ -145,6 +146,7 @@ export class Blueprint {
   enter() {
     if (!this.app.store.sheet) this.app.store.sheet = defaultSheet();
     if (!this.L.scales) this.L.scales = {};
+    if (this.L.labelScale == null) this.L.labelScale = 1;
     this.sel.clear();
     this.app.mode = 'blueprint';
     document.getElementById('palette').style.display = 'none';
@@ -176,6 +178,11 @@ export class Blueprint {
     this.L.overrides = {}; this.L.scales = {};
     const wc = { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 }, pc = { x: m + fw / 2, y: m + fh / 2 };
     this.L.originX = pc.x - wc.x * this.L.scale; this.L.originY = pc.y + wc.y * this.L.scale;
+    // auto label size ~ proportional to the drawing (text height ≈ 4.5% of its diagonal)
+    const diag = Math.hypot(b.maxX - b.minX, b.maxY - b.minY) || 1;
+    this.L.labelScale = Math.max(0.1, Math.min(6, 0.18 * diag));
+    const gi = document.getElementById('bp-gscale'); if (gi) gi.value = this.L.scale.toFixed(1);
+    const li = document.getElementById('bp-lscale'); if (li) li.value = this.L.labelScale.toFixed(2);
     this.fitView(); this._refreshSel(); this.app.render();
   }
 
@@ -336,6 +343,11 @@ export class Blueprint {
     const inp = document.getElementById('bp-gscale'); if (inp) inp.value = newS.toFixed(1);
     this.app.render();
   }
+  setLabelScale(v) {
+    this.L.labelScale = Math.max(0.05, Math.min(12, v || 1));
+    const i = document.getElementById('bp-lscale'); if (i) i.value = this.L.labelScale.toFixed(2);
+    this.app.render();
+  }
 
   selectAll() { this.sel = new Set(this.app.store.entities.map((e) => e.id)); this._refreshSel(); this.app.render(); }
   deselect() { this.sel.clear(); this._refreshSel(); this.app.render(); }
@@ -363,6 +375,9 @@ export class Blueprint {
       <div class="cat">Global scale (whole drawing)</div>
       <div class="bp-row2"><button id="bp-gminus">−</button><input id="bp-gscale" type="number" step="1" value="${this.L.scale.toFixed(1)}" title="mm per drawing unit"><button id="bp-gplus">+</button></div>
 
+      <div class="cat">Label size (text)</div>
+      <div class="bp-row2"><button id="bp-lminus">−</button><input id="bp-lscale" type="number" step="0.05" min="0.05" value="${(this.L.labelScale ?? 1).toFixed(2)}" title="scales all labels & dimension text"><button id="bp-lplus">+</button></div>
+
       <div class="cat">Selection scale</div>
       <div class="prop-row"><span id="bp-selcount">none selected</span></div>
       <div class="bp-row2"><button id="bp-all">Select all</button><button id="bp-none">Deselect</button></div>
@@ -386,6 +401,9 @@ export class Blueprint {
     $('#bp-gscale').addEventListener('change', (e) => this.setGlobalScale(parseFloat(e.target.value) || this.L.scale));
     $('#bp-gminus').addEventListener('click', () => this.scaleGlobal(1 / 1.1));
     $('#bp-gplus').addEventListener('click', () => this.scaleGlobal(1.1));
+    $('#bp-lscale').addEventListener('change', (e) => this.setLabelScale(parseFloat(e.target.value)));
+    $('#bp-lminus').addEventListener('click', () => this.setLabelScale((this.L.labelScale ?? 1) * 0.85));
+    $('#bp-lplus').addEventListener('click', () => this.setLabelScale((this.L.labelScale ?? 1) / 0.85));
     $('#bp-all').addEventListener('click', () => this.selectAll());
     $('#bp-none').addEventListener('click', () => this.deselect());
     $('#bp-sminus').addEventListener('click', () => this.scaleSelection(1 / 1.1));

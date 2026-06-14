@@ -88,6 +88,8 @@ Click **Blueprint** (or `Ctrl+B`) to publish the draft onto a formatted sheet:
 - **Scale** — three ways:
   - **Global** scales the whole drawing (number box, ± buttons, or *Shift+wheel*)
     so you can shrink it and free up room to arrange details.
+  - **Label size** scales all labels & dimension text *with* the drawing (so they
+    don't dominate when scaled); auto-set from the drawing size, tweakable.
   - **Single item** — select one and drag a corner of its box (or *Scale ±* / the
     `+`/`-` keys).
   - **Several at once** — box-select a subset and scale them together about their

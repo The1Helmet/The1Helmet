@@ -33,6 +33,7 @@ export class Pen {
   constructor(cam) {
     this.cam = cam;
     this.scale = cam.scale;
+    this.textScale = 1;   // multiplies all text sizes (used to scale labels with the drawing)
     this._out = [];
   }
   _p(w) { return this.cam.toScreen(w); }       // world -> screen point
@@ -96,7 +97,7 @@ export class Pen {
 
   text(pos, str, o = {}) {
     const P = this._p(pos);
-    const size = o.sizePx ?? 14;
+    const size = (o.sizePx ?? 14) * this.textScale;
     const anchor = o.anchor ?? 'middle';
     const baseline = o.baseline ?? 'middle';
     const color = o.color ?? INK;
